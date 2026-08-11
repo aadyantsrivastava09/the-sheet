@@ -384,11 +384,11 @@
         </select>
         <select id="schoolSubject">
           <option value="all">All subjects</option>
-          <option value="English">English</option>
-          <option value="Pol Sci">Pol Sci</option>
-          <option value="History">History</option>
+          <option value="Political Science">Political Science</option>
           <option value="Economics">Economics</option>
           <option value="Maths">Maths</option>
+          <option value="English">English</option>
+          <option value="Psychology">Psychology</option>
           <option value="CLAT Prep">CLAT Prep</option>
           <option value="SAT Prep">SAT Prep</option>
         </select>
@@ -518,7 +518,7 @@
 
     <div class="field">
       <label>5 &middot; What did I study? (the quality of it)</label>
-      <textarea id="fStudy" placeholder="e.g. Pol Sci long answers 2 hrs &mdash; real focus, not half-hearted"></textarea>
+      <textarea id="fStudy" placeholder="e.g. Political Science long answers 2 hrs &mdash; real focus, not half-hearted"></textarea>
       <div class="chips" id="qualChips" style="margin-top:10px"></div>
     </div>
 
@@ -553,11 +553,11 @@
       <div class="field">
         <label id="tmField2">Subject</label>
         <select id="tmSubj">
-          <option value="English">English</option>
-          <option value="Pol Sci">Pol Sci</option>
-          <option value="History">History</option>
+          <option value="Political Science">Political Science</option>
           <option value="Economics">Economics</option>
           <option value="Maths">Maths</option>
+          <option value="English">English</option>
+          <option value="Psychology">Psychology</option>
           <option value="CLAT Prep">CLAT Prep</option>
           <option value="SAT Prep">SAT Prep</option>
         </select>
@@ -1107,6 +1107,7 @@
   $("modal").addEventListener("click", function(ev){ if (ev.target===this) closeModal(); });
   document.addEventListener("keydown", function(ev){ if (ev.key==="Escape"){ closeModal(); closeTaskModal(); } });
   function closeModal(){ $("modal").classList.remove("open"); }
+  $("logToday").addEventListener("click", function(){ openModal(todayIso()); });
   /* ============ TASK HELPERS ============ */
   function taskIsDone(t){ return t.status==="done"; }
   function taskIsOpen(t){ return t.status==="pending"||t.status==="progress"; }
@@ -1249,7 +1250,7 @@
   $("addVantalyne").addEventListener("click", function(){ openTaskModal("vantalyne", null); });
   /* ============ TASK MODAL ============ */
   var editingTask=null; // { kind:'school'|'vantalyne', id:null|uuid }
-  var SCHOOL_SUBJECTS=["English","Pol Sci","History","Economics","Maths","CLAT Prep","SAT Prep"];
+  var SCHOOL_SUBJECTS=["Political Science","Economics","Maths","English","Psychology","CLAT Prep","SAT Prep"];
   var VANT_CATS=["Deck","Storysquad","Social","Content","Other"];
   function openTaskModal(kind, task){
     editingTask = task ? { kind:kind, id:task.id } : { kind:kind, id:null };

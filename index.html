@@ -244,6 +244,39 @@
   .frow2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:640px){.frow2{grid-template-columns:1fr}}
 
+  /* ============ EVENT CALENDAR ============ */
+  .calhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .calhead h3{font-size:18px;font-weight:700;flex:1;min-width:130px}
+  .calhead button{padding:8px 15px;border-radius:10px;font-size:13px}
+  .mcal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px}
+  .mw{font-size:10.5px;color:var(--slate);letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:4px 0;font-weight:700}
+  .mcell{min-height:78px;background:rgba(19,50,71,.45);border:1px solid rgba(255,246,231,.06);border-radius:12px;
+    padding:6px 7px;cursor:pointer;transition:.15s;position:relative}
+  .mcell:hover{border-color:rgba(224,135,107,.65);transform:translateY(-1px)}
+  .mcell.blank{background:transparent;border-color:transparent;cursor:default;pointer-events:none}
+  .mcell.today{outline:2px solid var(--ember);outline-offset:1px}
+  .mcell .md{font-size:11.5px;font-weight:700;color:rgba(255,246,231,.55)}
+  .mcell.today .md{color:var(--ember)}
+  .mcell .evs{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+  .evchip{font-size:9.5px;line-height:1.25;padding:2px 5px;border-radius:6px;color:#fff;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+  .evchip.more{background:rgba(255,246,231,.12);color:var(--slate)}
+  .evcoll{background:#e0876b} .evexam{background:#35c48b} .evboard{background:#b8963e} .evother{background:#5a7085}
+  .evlist{margin-top:8px}
+  .evrow{display:flex;gap:14px;align-items:flex-start;padding:13px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .evrow:last-child{border-bottom:none}
+  .evrow .ec{width:12px;height:12px;border-radius:4px;margin-top:5px;flex-shrink:0}
+  .evrow .em{flex:1;min-width:200px}
+  .evrow .et{font-size:14.5px;font-weight:600}
+  .evrow .es{font-size:12px;color:var(--slate);margin-top:2px}
+  .evrow .en{font-size:12.5px;color:var(--parch);margin-top:4px}
+  .ecat{font-size:10px;letter-spacing:.14em;font-weight:700;padding:3px 9px;border-radius:14px;display:inline-block}
+  .ecat.coll{background:rgba(224,135,107,.15);color:#e0876b;border:1px solid rgba(224,135,107,.4)}
+  .ecat.exam{background:rgba(53,196,139,.15);color:#35c48b;border:1px solid rgba(53,196,139,.4)}
+  .ecat.board{background:rgba(212,184,106,.15);color:#d4b86a;border:1px solid rgba(212,184,106,.4)}
+  .ecat.oth{background:rgba(157,184,204,.15);color:#9db8cc;border:1px solid rgba(157,184,204,.4)}
+  .evcatlabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+
   /* ============ TOAST / MISC ============ */
   #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);background:var(--navy2);
     border:1px solid var(--line2);color:var(--cream);padding:12px 20px;border-radius:14px;font-size:13.5px;font-weight:600;
@@ -320,6 +353,7 @@
     <button class="tab on" data-view="daily" id="tab-daily">Daily</button>
     <button class="tab" data-view="school" id="tab-school">School</button>
     <button class="tab" data-view="vantalyne" id="tab-vantalyne">Vantalyne</button>
+    <button class="tab" data-view="calendar" id="tab-calendar">Calendar</button>
     <button class="tab" data-view="where" id="tab-where">Where I'm at</button>
     <button class="tab" data-view="report" id="tab-report">Parent Report</button>
   </nav>
@@ -435,6 +469,31 @@
       </div>
     </section>
 
+    <!-- CALENDAR -->
+    <section class="view" id="v-calendar">
+      <div class="phead"><h2>Calendar</h2>
+        <span class="hint" id="calHint">College applications, competitive exams, boards &mdash; everything on one calendar, visible to both of us.</span></div>
+      <div class="panel">
+        <div class="calhead">
+          <button id="calPrev">&#8249;</button>
+          <h3 id="calMonth"></h3>
+          <button id="calNext">&#8250;</button>
+          <button id="addEvent" class="primary">+ Add event</button>
+        </div>
+        <div class="mcal" id="mcal"></div>
+        <div class="legend" style="margin-top:16px">
+          <span><span class="sw" style="background:#e0876b"></span>College app</span>
+          <span><span class="sw" style="background:#35c48b"></span>Competitive exam</span>
+          <span><span class="sw" style="background:#b8963e"></span>Board</span>
+          <span><span class="sw" style="background:#5a7085"></span>Other</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Upcoming</h2><span class="hint">Sorted by date &mdash; the next ones first.</span></div>
+        <div class="evlist" id="evList"></div>
+      </div>
+    </section>
+
     <!-- WHERE I'M AT -->
     <section class="view" id="v-where">
       <div class="phead"><h2>Where I'm at</h2>
@@ -496,10 +555,11 @@
     </div>
 
     <div class="field" id="schoolField">
-      <label>2 &middot; Did you go to school? (weekday)</label>
+      <label>2 &middot; Did you go to school? (weekday &mdash; Holiday = school closed, not counted)</label>
       <div class="yn">
         <button id="schYes">Yes</button>
         <button id="schNo">No</button>
+        <button id="schHoliday">Holiday</button>
       </div>
     </div>
 
@@ -602,6 +662,51 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- ============ EVENT MODAL ============ -->
+<div class="modal" id="evModal">
+  <div class="mcard">
+    <h3 id="evTitle">Event</h3>
+    <div class="mdate" id="evSub"></div>
+
+    <div class="field">
+      <label>Event</label>
+      <input type="text" id="evTitleI" placeholder="e.g. SAT exam, UCAS deadline, Boards start, CLAT">
+    </div>
+
+    <div class="frow2">
+      <div class="field">
+        <label>Category</label>
+        <select id="evCat">
+          <option value="college">College App</option>
+          <option value="exam">Competitive Exam</option>
+          <option value="board">Board</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="evDate">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Time (optional)</label>
+      <input type="time" id="evTime">
+    </div>
+
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="evNotes" placeholder="Optional &mdash; venue, what to carry, what to submit"></textarea>
+    </div>
+
+    <div class="mrow">
+      <button id="evSave" class="primary">Save</button>
+      <button id="evDelete" class="danger">Delete</button>
+      <button id="evCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
@@ -619,7 +724,7 @@
 
   var supabase = null;
   var role = null;                 // 'aadyant' | 'parent'
-  var state = { entries: {}, tasks: [] };
+  var state = { entries: {}, tasks: [], events: [] };
   var STUDY_TARGET = 3;
   var WAKE_MIN = "06:00", WAKE_MAX = "08:30";
   var STATUS_LABEL = { pending:"Not started", progress:"In progress", done:"Done", slipped:"Slipped" };
@@ -723,29 +828,31 @@
       ? "Read-only report \u2014 the live version of the promise."
       : "Not a Failure. A Plan. A Promise. \u2014 the system judges each day.";
     $("logToday").style.display = isP ? "none" : "inline-block";
-    // tabs: parent sees only the report
-    var tabs=["daily","school","vantalyne","where","report"];
+    // tabs: parent sees only Calendar + Report (both read-only)
+    var tabs=["daily","school","vantalyne","calendar","where","report"];
     for (var i=0;i<tabs.length;i++){
       var t=$("tab-"+tabs[i]); if (!t) continue;
-      t.style.display = isP ? "none" : "inline-block";
-      if (isP) t.classList.remove("on");
+      var keepForParent = (tabs[i]==="report"||tabs[i]==="calendar");
+      t.style.display = isP ? (keepForParent ? "inline-block" : "none") : "inline-block";
+      if (isP && !keepForParent) t.classList.remove("on");
     }
     if (isP){ $("tab-report").style.display="inline-block"; $("tab-report").classList.add("on"); }
     $("roNote").textContent = isP ? "Nothing on this page can be edited. This is the honest, live record." : "";
+    $("addEvent").style.display = isP ? "none" : "inline-block";
     loadAll().then(function(){
       renderAll();
       if (isP) switchView("report"); else switchView("daily");
     }).catch(function(err){ toast("Couldn't load data: "+err.message); });
   }
   function leaveApp(){
-    role=null; state={entries:{},tasks:[]};
+    role=null; state={entries:{},tasks:[],events:[]};
     $("app").style.display="none";
     $("lockScreen").style.display="flex";
     $("loginCard").style.display="none";
     $("loginPass").value="";
   }
   function switchView(name){
-    var views=["daily","school","vantalyne","where","report"];
+    var views=["daily","school","vantalyne","calendar","where","report"];
     for (var i=0;i<views.length;i++){
       var v=$("v-"+views[i]); if (v) v.classList.remove("on");
       var t=$("tab-"+views[i]); if (t) t.classList.remove("on");
@@ -757,6 +864,7 @@
     if (name==="report") renderReport();
     if (name==="school") renderSchool();
     if (name==="vantalyne") renderVantalyne();
+    if (name==="calendar") renderCalendar();
     if (name==="daily") renderAll();
     if (name==="where"||name==="report"){ setTimeout(renderCharts, 60); }
     if (name==="report"){ setTimeout(function(){ renderChartsR(); }, 60); }
@@ -770,14 +878,17 @@
   function loadAll(){
     return Promise.all([
       supabase.from("entries").select("*"),
-      supabase.from("tasks").select("*").order("created_at", { ascending:true })
+      supabase.from("tasks").select("*").order("created_at", { ascending:true }),
+      supabase.from("events").select("*").order("date", { ascending:true })
     ]).then(function(res){
-      var e=res[0], t=res[1];
+      var e=res[0], t=res[1], ev=res[2];
       if (e.error) throw e.error;
       if (t.error) throw t.error;
+      if (ev.error) throw ev.error;
       state.entries={};
       (e.data||[]).forEach(function(r){ state.entries[r.date]=r; });
       state.tasks=t.data||[];
+      state.events=ev.data||[];
     });
   }
   function apiUpsertEntry(entry){
@@ -813,6 +924,18 @@
         return loadAll().then(renderAll);
       });
   }
+  function apiUpsertEvent(ev){
+    return supabase.from("events").upsert(ev).then(function(res){
+      if (res.error) throw res.error;
+      return loadAll().then(renderAll);
+    });
+  }
+  function apiDeleteEvent(id){
+    return supabase.from("events").delete().eq("id", id).then(function(res){
+      if (res.error) throw res.error;
+      return loadAll().then(renderAll);
+    });
+  }
   /* ============ VERDICT ENGINE (the system decides) ============ */
   function criteriaFor(dateStr){
     var d = parseIso(dateStr);
@@ -823,6 +946,8 @@
     c.push({ key:"wake", label:"Wake on time", ok: wakeOk, detail: e.wake ? "woke at "+e.wake : "wake time not logged" });
     if (weekend) {
       c.push({ key:"school", label:"School (weekend)", ok:true, detail:"weekend \u2014 not required", na:true });
+    } else if (e.school === "holiday") {
+      c.push({ key:"school", label:"School (holiday)", ok:true, detail:"holiday \u2014 school closed, not counted", na:true });
     } else {
       c.push({ key:"school", label:"Went to school", ok: e.school===true, detail: e.school===true ? "attended" : (e.school===false ? "did not go" : "not logged") });
     }
@@ -1027,6 +1152,7 @@
   function renderSchool(){
     $("schYes").style.outline = schoolSel===true ? "2px solid var(--cream)" : "none";
     $("schNo").style.outline = schoolSel===false ? "2px solid var(--cream)" : "none";
+    $("schHoliday").style.outline = schoolSel==="holiday" ? "2px solid var(--cream)" : "none";
   }
   function renderComp(){
     $("compYes").style.outline = compSel===true ? "2px solid var(--cream)" : "none";
@@ -1086,6 +1212,7 @@
   }
   $("schYes").addEventListener("click", function(){ schoolSel=true; renderSchool(); updateVerdict(); });
   $("schNo").addEventListener("click", function(){ schoolSel=false; renderSchool(); updateVerdict(); });
+  $("schHoliday").addEventListener("click", function(){ schoolSel="holiday"; renderSchool(); updateVerdict(); });
   $("compYes").addEventListener("click", function(){ compSel=true; renderComp(); updateVerdict(); });
   $("compNo").addEventListener("click", function(){ compSel=false; renderComp(); updateVerdict(); });
   $("addMock").addEventListener("click", function(){ mocks.push({name:"",score:""}); renderMocks(); });
@@ -1415,6 +1542,138 @@
     renderAcardsInto("reportAcards");
     renderChartsR();
   }
+  /* ============ EVENT CALENDAR ============ */
+  var EV_CATS = {
+    college: { cls:"evcoll",  cat:"coll",  label:"College App",      color:"#e0876b" },
+    exam:    { cls:"evexam",  cat:"exam",  label:"Competitive Exam", color:"#35c48b" },
+    board:   { cls:"evboard", cat:"board", label:"Board",            color:"#b8963e" },
+    other:   { cls:"evother", cat:"oth",   label:"Other",            color:"#5a7085" }
+  };
+  var calMonth = new Date().getMonth(), calYear = new Date().getFullYear();
+
+  function eventsOn(dateStr){
+    return state.events.filter(function(ev){ return ev.date===dateStr; });
+  }
+  function evRowHtml(ev, ro){
+    var c = EV_CATS[ev.category]||EV_CATS.other;
+    var acts = ro ? "" : '<div class="acts">'+
+      '<button data-ee="'+ev.id+'">Edit</button><button data-ed="'+ev.id+'" class="danger">Delete</button></div>';
+    return '<div class="evrow"><span class="ec" style="background:'+c.color+'"></span>'+
+      '<div class="em"><div class="et">'+esc(ev.title)+' <span class="ecat '+c.cat+'">'+c.label+'</span></div>'+
+      '<div class="es">'+pretty(ev.date)+(ev.time?' &nbsp;\u00b7&nbsp; '+esc(ev.time):'')+'</div>'+
+      (ev.notes?'<div class="en">'+esc(ev.notes)+'</div>':'')+
+      '</div>'+acts+'</div>';
+  }
+  function renderEvList(){
+    var el=$("evList"); if (!el) return;
+    var ro = role==="parent";
+    var today=todayIso();
+    var arr=state.events.filter(function(ev){ return ev.date>=today; })
+      .sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    if (!arr.length){
+      el.innerHTML = '<div class="empty"><div class="big">&#128197;</div>No upcoming events. Add the SAT, CLAT, boards and every college deadline here &mdash; parents see it too.</div>';
+      return;
+    }
+    el.innerHTML = arr.map(function(ev){ return evRowHtml(ev, ro); }).join("");
+    if (!ro){
+      var es=el.querySelectorAll("[data-ee]"), ds=el.querySelectorAll("[data-ed]");
+      for (var i=0;i<es.length;i++) es[i].addEventListener("click", function(){ openEventModal(eventById(this.getAttribute("data-ee")), null); });
+      for (var j=0;j<ds.length;j++) ds[j].addEventListener("click", function(){
+        var id=this.getAttribute("data-ed");
+        if (confirm("Delete this event?")) apiDeleteEvent(id).catch(function(err){ toast("Delete failed: "+err.message); });
+      });
+    }
+  }
+  function eventById(id){
+    for (var i=0;i<state.events.length;i++) if (state.events[i].id===id) return state.events[i];
+    return null;
+  }
+  function renderCalendar(){
+    var el=$("mcal"); if (!el) return;
+    var ro = role==="parent";
+    var first = new Date(calYear, calMonth, 1);
+    var daysIn = new Date(calYear, calMonth+1, 0).getDate();
+    var lead = (first.getDay()+6)%7; // Monday-first
+    $("calMonth").textContent = MONTHS[calMonth]+" "+calYear;
+    var html = "";
+    var wd=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    for (var w=0;w<7;w++) html += '<div class="mw">'+wd[w]+'</div>';
+    for (var b=0;b<lead;b++) html += '<div class="mcell blank"></div>';
+    var today = todayIso();
+    for (var d=1;d<=daysIn;d++){
+      var ds = calYear+"-"+pad(calMonth+1)+"-"+pad(d);
+      var evs = eventsOn(ds).slice(0,3);
+      var more = eventsOn(ds).length - evs.length;
+      var chips="";
+      for (var i=0;i<evs.length;i++){
+        var c = EV_CATS[evs[i].category]||EV_CATS.other;
+        chips += '<div class="evchip '+c.cls+'" title="'+esc(evs[i].title)+'">'+esc(evs[i].title)+'</div>';
+      }
+      if (more>0) chips += '<div class="evchip more">+'+more+' more</div>';
+      html += '<div class="mcell'+(ds===today?' today':'')+'" data-d="'+ds+'">'+
+        '<div class="md">'+d+'</div>'+(chips?'<div class="evs">'+chips+'</div>':'')+'</div>';
+    }
+    el.innerHTML = html;
+    if (!ro){
+      var cells = el.querySelectorAll(".mcell:not(.blank)");
+      for (var k=0;k<cells.length;k++) cells[k].addEventListener("click", function(){
+        openEventModal(null, this.getAttribute("data-d"));
+      });
+    }
+    renderEvList();
+  }
+  $("calPrev").addEventListener("click", function(){
+    calMonth--; if (calMonth<0){ calMonth=11; calYear--; }
+    renderCalendar();
+  });
+  $("calNext").addEventListener("click", function(){
+    calMonth++; if (calMonth>11){ calMonth=0; calYear++; }
+    renderCalendar();
+  });
+  $("addEvent").addEventListener("click", function(){ openEventModal(null, todayIso()); });
+
+  /* ============ EVENT MODAL ============ */
+  var editingEv=null;
+  function openEventModal(ev, dateStr){
+    editingEv = ev || null;
+    $("evTitle").textContent = ev ? "Edit event" : "Add event";
+    $("evSub").textContent = ev ? "Update the details \u2014 it changes for both of you." : (dateStr ? "On "+pretty(dateStr) : "");
+    $("evTitleI").value = ev ? ev.title : "";
+    $("evCat").value = ev ? ev.category : "college";
+    $("evDate").value = ev ? ev.date : (dateStr || todayIso());
+    $("evTime").value = (ev && ev.time) ? ev.time : "";
+    $("evNotes").value = (ev && ev.notes) ? ev.notes : "";
+    $("evDelete").style.display = ev ? "inline-block" : "none";
+    $("evModal").classList.add("open");
+    $("evTitleI").focus();
+  }
+  function closeEvModal(){ $("evModal").classList.remove("open"); }
+  $("evSave").addEventListener("click", function(){
+    var title=$("evTitleI").value.trim();
+    var date=$("evDate").value;
+    if (!title){ toast("Give the event a name."); return; }
+    if (!date){ toast("Pick a date."); return; }
+    var ev = {
+      title: title,
+      category: $("evCat").value,
+      date: date,
+      time: $("evTime").value || null,
+      notes: $("evNotes").value.trim() || null
+    };
+    if (editingEv) ev.id = editingEv.id;
+    apiUpsertEvent(ev).then(function(){
+      toast("Event saved \u2014 it\u2019s on the calendar for both of you.");
+      closeEvModal();
+    }).catch(function(err){ toast("Save failed: "+err.message); });
+  });
+  $("evDelete").addEventListener("click", function(){
+    if (editingEv && editingEv.id && confirm("Delete this event?")){
+      apiDeleteEvent(editingEv.id).then(closeEvModal).catch(function(err){ toast("Delete failed: "+err.message); });
+    }
+  });
+  $("evCancel").addEventListener("click", closeEvModal);
+  $("evModal").addEventListener("click", function(ev2){ if (ev2.target===this) closeEvModal(); });
+  document.addEventListener("keydown", function(ev){ if (ev.key==="Escape") closeEvModal(); });
   /* ============ CHARTS (generic) ============ */
   function setupCanvas(cv){
     var dpr = window.devicePixelRatio||1;
@@ -1558,6 +1817,7 @@
     renderSchool();
     renderVantalyne();
     renderWhere();
+    renderCalendar();
   }
   window.addEventListener("resize", function(){
     if (!$("modal").classList.contains("open") && !$("taskModal").classList.contains("open")){

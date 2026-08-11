@@ -876,10 +876,12 @@
 
   /* ============ STORE ============ */
   function loadAll(){
+    var pEvents = supabase.from("events").select("*").order("date", { ascending:true })
+      .catch(function(){ return { data: [] }; }); // calendar table not created yet -> empty, not broken
     return Promise.all([
       supabase.from("entries").select("*"),
       supabase.from("tasks").select("*").order("created_at", { ascending:true }),
-      supabase.from("events").select("*").order("date", { ascending:true })
+      pEvents
     ]).then(function(res){
       var e=res[0], t=res[1], ev=res[2];
       if (e.error) throw e.error;

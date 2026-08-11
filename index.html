@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Sheet — Accountability Tracker</title>
+<style>
+  :root{
+    --ink:#0a131d; --navy:#133247; --navy2:#1b3e58; --navy3:#24506f;
+    --cream:#fff6e7; --parch:#e6d8c0; --slate:#9db8cc; --maroon:#521d21;
+    --ember:#e0876b; --good:#35c48b; --slip:#e05252; --amber:#d4b86a;
+    --line:rgba(255,246,231,.08); --line2:rgba(255,246,231,.16);
+    --radius:18px; --font:"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--ink);color:var(--cream);font-family:var(--font);line-height:1.55;min-height:100vh;
+    background-image:
+      radial-gradient(1100px 480px at 85% -10%, rgba(224,135,107,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 5%, rgba(19,50,71,.6), transparent 55%);
+    background-attachment:fixed}
+  ::selection{background:rgba(224,135,107,.35)}
+  button{font-family:var(--font);font-size:13px;font-weight:600;color:var(--cream);background:var(--navy);
+    border:1px solid var(--line2);border-radius:12px;padding:10px 16px;cursor:pointer;transition:.18s}
+  button:hover{background:var(--navy2);border-color:rgba(224,135,107,.55);transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  button.primary{background:var(--ember);color:#231209;border-color:transparent}
+  button.primary:hover{background:#e8987f}
+  button.danger{color:#ffb4b4}
+  button.danger:hover{background:rgba(224,82,82,.16);border-color:rgba(224,82,82,.5)}
+  button.good{background:var(--good);color:#05271a;border-color:transparent}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  input[type=text],input[type=number],input[type=time],input[type=date],input[type=password],textarea,select{width:100%;
+    background:rgba(10,19,29,.6);color:var(--cream);border:1px solid var(--line2);border-radius:12px;
+    padding:11px 14px;font-family:var(--font);font-size:14px;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:rgba(224,135,107,.7)}
+  input[type=time],input[type=date]{width:auto}
+  textarea{resize:vertical;min-height:64px}
+  select{cursor:pointer}
+  select option{background:var(--navy2);color:var(--cream)}
+
+  /* ============ LOCK SCREEN ============ */
+  .lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:90;padding:20px}
+  .lbox{width:min(560px,100%);text-align:center}
+  .lbox .kicker{font-size:11px;letter-spacing:.35em;color:var(--ember);text-transform:uppercase;font-weight:700}
+  .lbox h1{font-size:52px;font-weight:800;margin-top:10px;letter-spacing:-.01em}
+  .lbox h1 em{font-style:normal;color:var(--ember)}
+  .lbox .tag{color:var(--slate);margin-top:10px;font-size:14px;letter-spacing:.04em}
+  .ldoors{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
+  .ldoor{background:linear-gradient(165deg,rgba(27,62,88,.6),rgba(19,50,71,.4));border:1px solid var(--line2);
+    border-radius:20px;padding:26px 18px;cursor:pointer;transition:.2s;user-select:none}
+  .ldoor:hover{transform:translateY(-3px);border-color:rgba(224,135,107,.7)}
+  .ldoor .ld-icon{font-size:30px;margin-bottom:10px}
+  .ldoor .ld-name{font-size:16px;font-weight:700}
+  .ldoor .ld-sub{font-size:12.5px;color:var(--slate);margin-top:4px}
+  .lcard{background:linear-gradient(170deg,var(--navy2),#102a3d);border:1px solid var(--line2);border-radius:20px;
+    padding:24px;margin-top:22px;text-align:left;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .lcard .lemail{font-size:13px;color:var(--slate);margin-bottom:10px}
+  .lcard .lemail b{color:var(--cream)}
+  .lcard input{margin-top:4px}
+  .lcard .lrow{display:flex;gap:10px;margin-top:12px}
+  .lcard .lrow button{flex:1}
+  .lerr{color:var(--slip);font-size:12.5px;margin-top:10px;min-height:18px}
+  .lfoot{color:rgba(157,184,204,.55);font-size:11.5px;margin-top:22px;letter-spacing:.03em}
+
+  /* ============ APP SHELL ============ */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:26px 42px 8px;flex-wrap:wrap}
+  .kicker{font-size:11px;letter-spacing:.35em;color:var(--ember);text-transform:uppercase;font-weight:700}
+  .brand h1{font-size:34px;font-weight:800;letter-spacing:-.01em;margin-top:6px;line-height:1.05}
+  .brand h1 em{font-style:normal;color:var(--ember)}
+  .tag{color:var(--slate);margin-top:8px;font-size:13.5px;letter-spacing:.04em}
+  .topright{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .who{display:flex;align-items:center;gap:10px;background:rgba(19,50,71,.6);border:1px solid var(--line);
+    border-radius:14px;padding:6px 8px 6px 14px}
+  .who .dot{width:9px;height:9px;border-radius:50%;background:var(--ember);box-shadow:0 0 10px rgba(224,135,107,.8)}
+  .who.p .dot{background:var(--good);box-shadow:0 0 10px rgba(53,196,139,.8)}
+  .who .wname{font-size:12.5px;font-weight:600}
+  .who button{padding:7px 12px;font-size:12px;border-radius:9px}
+  .tabs{display:flex;gap:6px;padding:18px 42px 0;flex-wrap:wrap;max-width:1180px;margin:0 auto}
+  .tab{padding:9px 18px;border-radius:12px 12px 0 0;background:rgba(19,50,71,.4);border:1px solid var(--line);
+    border-bottom:none;font-size:13px;font-weight:600;color:var(--slate)}
+  .tab:hover{color:var(--cream);transform:none;border-color:var(--line2)}
+  .tab.on{background:var(--navy2);color:var(--cream);border-color:var(--line2)}
+  main{max-width:1180px;margin:0 auto;padding:0 42px 46px}
+  .view{display:none;padding-top:18px}
+  .view.on{display:block}
+  footer{max-width:1180px;margin:0 auto;padding:10px 42px 40px;text-align:center;color:var(--slate);font-size:12.5px}
+  footer .promise{color:var(--parch);font-size:14px;font-style:italic;margin-bottom:8px}
+
+  /* ============ STATS ============ */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:6px}
+  .stat{background:linear-gradient(160deg,rgba(27,62,88,.55),rgba(19,50,71,.35));
+    border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;position:relative;overflow:hidden}
+  .stat::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;
+    background:radial-gradient(circle,rgba(224,135,107,.18),transparent 70%)}
+  .stat .lbl{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);font-weight:700}
+  .stat .val{font-size:36px;font-weight:800;margin-top:8px;line-height:1}
+  .stat .sub{font-size:12px;color:var(--parch);margin-top:8px;opacity:.85}
+  .val.green{color:var(--good)} .val.red{color:var(--slip)} .val.ember{color:var(--ember)}
+
+  /* ============ PANELS ============ */
+  .panel{background:linear-gradient(170deg,rgba(27,62,88,.42),rgba(10,19,29,.6));
+    border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin-top:22px}
+  .phead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .phead h2{font-size:19px;font-weight:700;letter-spacing:.02em}
+  .phead .hint{font-size:12.5px;color:var(--slate)}
+  .cal-wrap{overflow-x:auto;padding-bottom:6px}
+  .cal{display:grid;grid-template-columns:36px repeat(8,1fr);column-gap:9px;row-gap:7px;min-width:680px}
+  .day-label{font-size:10px;color:var(--slate);letter-spacing:.08em;display:flex;align-items:center;justify-content:flex-end;padding-right:2px}
+  .month-tag{grid-column:2/-1;font-size:10.5px;color:var(--slate);letter-spacing:.18em;text-transform:uppercase;padding-top:4px}
+  .cell{aspect-ratio:1/1;border-radius:9px;background:rgba(19,50,71,.5);border:1px solid rgba(255,246,231,.05);
+    display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,246,231,.35);
+    cursor:pointer;transition:.15s;position:relative}
+  .cell:hover{transform:scale(1.12);border-color:rgba(224,135,107,.7);z-index:2}
+  .cell.good{background:var(--good);color:#05271a;border-color:transparent;font-weight:700}
+  .cell.slip{background:var(--slip);color:#2a0606;border-color:transparent;font-weight:700}
+  .cell.empty:hover{background:rgba(27,62,88,.85);color:var(--cream)}
+  .cell.today{outline:2px solid var(--ember);outline-offset:2px}
+  .cell.future{opacity:.25;cursor:default}
+  .cell.future:hover{transform:none;border-color:rgba(255,246,231,.05)}
+  .cell.ro{pointer-events:none}
+  .legend{display:flex;gap:18px;align-items:center;margin-top:18px;font-size:12px;color:var(--slate);flex-wrap:wrap}
+  .legend .sw{width:13px;height:13px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:-2px}
+  .sw.good{background:var(--good)} .sw.slip{background:var(--slip)}
+  .sw.empty{background:rgba(19,50,71,.6);border:1px solid rgba(255,246,231,.1)}
+  .wrow{display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .wrow:last-child{border-bottom:none}
+  .wrow .wl{width:120px;font-size:13px;color:var(--cream);font-weight:600;flex-shrink:0}
+  .wrow .dots{display:flex;gap:6px;flex:1;min-width:150px}
+  .wrow .dots span{width:22px;height:22px;border-radius:7px;display:block}
+  .dots .g{background:var(--good)} .dots .s{background:var(--slip)}
+  .dots .u{background:rgba(19,50,71,.55);border:1px solid rgba(255,246,231,.08)}
+  .wrow .vd{font-size:12.5px;font-weight:700;letter-spacing:.05em;flex-shrink:0}
+  .vd.on{color:var(--good)} .vd.warn{color:var(--ember)} .vd.bad{color:var(--slip)} .vd.blank{color:var(--slate);font-weight:500}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media (max-width:900px){.charts{grid-template-columns:1fr}}
+  .chart-box h3{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--slate);margin-bottom:12px}
+  canvas{width:100%;height:250px;display:block}
+  .ch-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--slate);margin-top:10px}
+  .ch-legend span b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+
+  /* ============ ENTRIES ============ */
+  .entry{display:flex;gap:16px;padding:16px 6px;border-bottom:1px solid var(--line);align-items:flex-start;flex-wrap:wrap}
+  .entry:last-child{border-bottom:none}
+  .entry .dot{width:12px;height:12px;border-radius:50%;margin-top:6px;flex-shrink:0}
+  .dot.g{background:var(--good);box-shadow:0 0 12px rgba(53,196,139,.5)}
+  .dot.s{background:var(--slip);box-shadow:0 0 12px rgba(224,82,82,.5)}
+  .entry .bd{flex:1;min-width:240px}
+  .entry .date{font-size:15px;font-weight:700}
+  .entry .meta{font-size:12.5px;color:var(--slate);margin-top:3px;display:flex;gap:14px;flex-wrap:wrap}
+  .entry .notes{font-size:13.5px;color:var(--parch);margin-top:6px}
+  .crit{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .crit span{font-size:12px;color:var(--slate)}
+  .crit span.ok{color:var(--good)} .crit span.no{color:var(--slip)} .crit span.na{color:rgba(255,246,231,.35)}
+  .badge{font-size:10.5px;letter-spacing:.14em;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block;margin-top:4px}
+  .badge.g{background:rgba(53,196,139,.14);color:var(--good);border:1px solid rgba(53,196,139,.35)}
+  .badge.s{background:rgba(224,82,82,.14);color:var(--slip);border:1px solid rgba(224,82,82,.35)}
+  .entry .acts{display:flex;gap:8px;flex-shrink:0}
+  .entry .acts button{padding:6px 12px;font-size:12px;border-radius:9px}
+  .empty{text-align:center;padding:40px 20px;color:var(--slate);font-size:14.5px}
+  .empty .big{font-size:40px;color:rgba(224,135,107,.6);margin-bottom:10px}
+
+  /* ============ TASKS (school / vantalyne) ============ */
+  .plate{background:linear-gradient(160deg,rgba(224,135,107,.12),rgba(82,29,33,.25));
+    border:1px solid rgba(224,135,107,.35);border-radius:var(--radius);padding:20px 24px;margin-top:22px}
+  .plate h3{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);margin-bottom:10px}
+  .plate .pli{font-size:14px;padding:5px 0;color:var(--cream)}
+  .plate .pli b{color:var(--ember)}
+  .tasktool{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:22px}
+  .tasktool select{width:auto;min-width:130px;padding:9px 12px;border-radius:10px;font-size:12.5px}
+  .tasktool .count{margin-left:auto;font-size:12px;color:var(--slate)}
+  .tasklist{margin-top:12px}
+  .taskrow{display:flex;gap:14px;align-items:center;padding:14px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .taskrow:last-child{border-bottom:none}
+  .taskrow .tc{width:16px;height:16px;border-radius:50%;border:2px solid var(--line2);cursor:pointer;flex-shrink:0;transition:.15s;background:transparent}
+  .taskrow .tc:hover{border-color:var(--good)}
+  .taskrow .tc.done{background:var(--good);border-color:var(--good)}
+  .taskrow .tc.slipd{background:var(--slip);border-color:var(--slip)}
+  .taskrow .tmain{flex:1;min-width:220px}
+  .taskrow .tt{font-size:14.5px;font-weight:600}
+  .taskrow .tt.over{color:var(--slip)}
+  .taskrow .tt.done-t{color:rgba(255,246,231,.4);text-decoration:line-through}
+  .taskrow .tsub{font-size:12px;color:var(--slate);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+  .taskrow .tnotes{font-size:12.5px;color:var(--parch);margin-top:4px}
+  .st{font-size:10.5px;letter-spacing:.12em;font-weight:700;padding:3px 9px;border-radius:16px;display:inline-block}
+  .st.pending{background:rgba(157,184,204,.14);color:var(--slate);border:1px solid rgba(157,184,204,.3)}
+  .st.progress{background:rgba(212,184,106,.14);color:var(--amber);border:1px solid rgba(212,184,106,.4)}
+  .st.done{background:rgba(53,196,139,.14);color:var(--good);border:1px solid rgba(53,196,139,.4)}
+  .st.slipped{background:rgba(224,82,82,.14);color:var(--slip);border:1px solid rgba(224,82,82,.4)}
+  .st.over{background:rgba(224,82,82,.2);color:#ffb4b4;border:1px solid rgba(224,82,82,.55)}
+  .pd{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:1px}
+  .pd.h{background:var(--slip)} .pd.m{background:var(--amber)} .pd.l{background:var(--slate)}
+  .taskrow .acts{display:flex;gap:6px;flex-shrink:0}
+  .taskrow .acts button{padding:5px 11px;font-size:11.5px;border-radius:8px}
+  .subj{font-weight:700;color:var(--ember)}
+
+  /* ============ WHERE I'M AT / ANALYSIS ============ */
+  .honesty{display:flex;align-items:center;gap:26px;flex-wrap:wrap;background:linear-gradient(160deg,rgba(27,62,88,.6),rgba(19,50,71,.4));
+    border:1px solid var(--line);border-radius:var(--radius);padding:24px 28px;margin-top:6px}
+  .honesty .hn{font-size:52px;font-weight:800;line-height:1}
+  .honesty .hn.g{color:var(--good)} .honesty .hn.e{color:var(--ember)} .honesty .hn.r{color:var(--slip)}
+  .honesty .ht{font-size:14px;color:var(--cream);font-weight:600}
+  .honesty .hs{font-size:12.5px;color:var(--slate);margin-top:4px;max-width:420px}
+  .acards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+  @media (max-width:900px){.acards{grid-template-columns:1fr}}
+  .acard{background:rgba(10,19,29,.5);border:1px solid var(--line);border-radius:16px;padding:18px 20px;border-left:4px solid var(--slate)}
+  .acard.g{border-left-color:var(--good)} .acard.a{border-left-color:var(--amber)} .acard.r{border-left-color:var(--slip)}
+  .acard .at{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);font-weight:700}
+  .acard .ah{font-size:17px;font-weight:700;margin-top:6px}
+  .acard.g .ah{color:var(--good)} .acard.a .ah{color:var(--amber)} .acard.r .ah{color:var(--slip)}
+  .acard .aw{font-size:13px;color:var(--parch);margin-top:5px}
+  .acard .ado{margin-top:10px;background:rgba(224,135,107,.12);border:1px solid rgba(224,135,107,.35);color:#ffd9c9;
+    font-size:12.5px;padding:9px 12px;border-radius:10px}
+  .acard .ado b{color:var(--ember)}
+
+  /* ============ MODALS ============ */
+  .modal{position:fixed;inset:0;background:rgba(4,8,13,.72);backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.open{display:flex}
+  .mcard{width:min(620px,100%);max-height:92vh;overflow-y:auto;background:linear-gradient(170deg,var(--navy2),#102a3d);
+    border:1px solid var(--line2);border-radius:22px;padding:28px 30px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  .mcard h3{font-size:20px;font-weight:800}
+  .mcard .mdate{color:var(--slate);font-size:13px;margin-top:2px}
+  .field{margin-top:18px}
+  .field label{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);font-weight:700;margin-bottom:8px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{min-width:44px;padding:9px 12px;text-align:center;border-radius:11px;cursor:pointer;
+    background:rgba(10,19,29,.55);border:1px solid var(--line2);color:var(--parch);font-weight:600;transition:.15s}
+  .chip:hover{border-color:rgba(224,135,107,.6)}
+  .chip.on{background:var(--ember);color:#231209;border-color:transparent}
+  .yn{display:flex;gap:10px}
+  .yn button{flex:1;padding:12px;font-size:13.5px;border-radius:12px}
+  .mockrow{display:flex;gap:10px;margin-bottom:8px;align-items:center}
+  .mockrow input[type=text]{flex:2}
+  .mockrow input[type=number]{flex:1;min-width:70px}
+  .mockrow button{padding:8px 12px}
+  .verdictbox{border-radius:14px;padding:14px 16px;margin-top:18px;font-size:14px;font-weight:600;border:1px solid}
+  .verdictbox.g{background:rgba(53,196,139,.12);border-color:rgba(53,196,139,.4);color:var(--good)}
+  .verdictbox.s{background:rgba(224,82,82,.12);border-color:rgba(224,82,82,.4);color:var(--slip)}
+  .verdictbox .why{font-weight:400;font-size:12.5px;margin-top:6px;color:var(--parch)}
+  .mrow{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+  .mrow button{flex:1;min-width:110px}
+  .frow2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){.frow2{grid-template-columns:1fr}}
+
+  /* ============ TOAST / MISC ============ */
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);background:var(--navy2);
+    border:1px solid var(--line2);color:var(--cream);padding:12px 20px;border-radius:14px;font-size:13.5px;font-weight:600;
+    z-index:99;transition:.3s;opacity:0;box-shadow:0 14px 40px rgba(0,0,0,.5);max-width:90vw}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,246,231,.2);border-top-color:var(--ember);
+    border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:-3px;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .ro-note{text-align:center;font-size:12.5px;color:var(--slate);margin-top:14px;font-style:italic}
+  @media (max-width:860px){.stats{grid-template-columns:repeat(2,1fr)}.top,main,footer,.tabs{padding-left:20px;padding-right:20px}}
+  @media print{
+    body{background:#fff;color:#111}
+    .top .topright,.tabs,.acts,.modal{display:none}
+    .stat,.panel{background:#fff;border:1px solid #ccc;color:#111}
+    .stat .lbl,.phead .hint,.entry .meta,.tag,.chart-box h3,.taskrow .tsub{color:#555}
+    .stat .val{color:#111}
+    .cell{background:#eee;border:1px solid #ddd;color:#888}
+    .cell.good{background:var(--good);color:#fff}
+    .cell.slip{background:var(--slip);color:#fff}
+    .day-label,.month-tag,.legend,.crit span{color:#666}
+    .entry .notes,.crit span.na,.taskrow .tnotes{color:#333}
+    .brand h1 em{color:var(--ember)}
+  }
+</style>
+</head>
+<body>
+<!-- ============ LOCK SCREEN ============ -->
+<div class="lock" id="lockScreen">
+  <div class="lbox">
+    <div class="kicker">Vantalyne Labs &middot; Personal</div>
+    <h1>The <em>Sheet</em></h1>
+    <p class="tag">Not a Failure. A Plan. A Promise. &mdash; the system judges each day, and the report is live.</p>
+    <div class="ldoors">
+      <div class="ldoor" data-role="aadyant">
+        <div class="ld-icon">&#10022;</div>
+        <div class="ld-name">I'm Aadyant</div>
+        <div class="ld-sub">log the day &middot; plan school &middot; fix what slips</div>
+      </div>
+      <div class="ldoor" data-role="parent">
+        <div class="ld-icon">&#9704;</div>
+        <div class="ld-name">I'm a parent</div>
+        <div class="ld-sub">read the report &middot; no edits, ever</div>
+      </div>
+    </div>
+    <div class="lcard" id="loginCard" style="display:none">
+      <div class="lemail" id="loginEmail"></div>
+      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+      <div class="lrow">
+        <button id="loginBtn" class="primary">Unlock</button>
+        <button id="loginBack" class="ghost">Back</button>
+      </div>
+      <div class="lerr" id="loginErr"></div>
+    </div>
+    <div class="lfoot" id="lockFoot">One file. Live link. The deal is honesty &mdash; unanswered counts as missed.</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" style="display:none">
+  <header class="top">
+    <div class="brand">
+      <div class="kicker">Vantalyne Labs &middot; Personal</div>
+      <h1>The <em>Sheet</em></h1>
+      <p class="tag" id="appTag">Not a Failure. A Plan. A Promise.</p>
+    </div>
+    <div class="topright">
+      <div class="who" id="whoBox"><span class="dot"></span><span class="wname" id="whoName"></span>
+        <button id="logoutBtn" class="ghost">Log out</button></div>
+      <button id="logToday" class="primary">Log today</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-view="daily" id="tab-daily">Daily</button>
+    <button class="tab" data-view="school" id="tab-school">School</button>
+    <button class="tab" data-view="vantalyne" id="tab-vantalyne">Vantalyne</button>
+    <button class="tab" data-view="where" id="tab-where">Where I'm at</button>
+    <button class="tab" data-view="report" id="tab-report">Parent Report</button>
+  </nav>
+
+  <main>
+    <!-- DAILY -->
+    <section class="view on" id="v-daily">
+      <div class="stats" id="stats"></div>
+      <div class="panel">
+        <div class="phead"><h2>Last 8 weeks</h2>
+          <span class="hint">Click any day to log it. Green = kept the promise. Red = slipped.</span></div>
+        <div class="cal-wrap"><div class="cal" id="cal"></div></div>
+        <div class="legend">
+          <span><span class="sw good"></span>Good day</span>
+          <span><span class="sw slip"></span>Slip day</span>
+          <span><span class="sw empty"></span>Not logged</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Week verdicts</h2>
+          <span class="hint">The system decides &mdash; wake time, school, complaints, study hours.</span></div>
+        <div id="weeks"></div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Academics</h2>
+          <span class="hint">Mock scores over time and study hours per day.</span></div>
+        <div class="charts">
+          <div class="chart-box">
+            <h3>Mock scores</h3>
+            <div id="mockChartWrap"><canvas id="mockChart"></canvas></div>
+            <div class="ch-legend">
+              <span><b style="background:#e0876b"></b>SAT</span>
+              <span><b style="background:#35c48b"></b>CLAT</span>
+              <span><b style="background:#9db8cc"></b>Other</span>
+            </div>
+          </div>
+          <div class="chart-box">
+            <h3>Study hours &mdash; last 14 days</h3>
+            <div id="hoursChartWrap"><canvas id="hoursChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Daily log</h2><span class="hint">Every entry, newest first.</span></div>
+        <div id="entries"></div>
+      </div>
+    </section>
+
+    <!-- SCHOOL -->
+    <section class="view" id="v-school">
+      <div class="plate">
+        <h3>Today's plate</h3>
+        <div id="plate"></div>
+      </div>
+      <div class="tasktool">
+        <select id="schoolFilter">
+          <option value="all">All</option>
+          <option value="open">Not done</option>
+          <option value="overdue">Overdue</option>
+          <option value="week">Due this week</option>
+          <option value="done">Done</option>
+        </select>
+        <select id="schoolSubject">
+          <option value="all">All subjects</option>
+          <option value="English">English</option>
+          <option value="Pol Sci">Pol Sci</option>
+          <option value="History">History</option>
+          <option value="Economics">Economics</option>
+          <option value="Maths">Maths</option>
+          <option value="CLAT Prep">CLAT Prep</option>
+          <option value="SAT Prep">SAT Prep</option>
+        </select>
+        <button id="addSchool" class="primary">+ Add</button>
+        <span class="count" id="schoolCount"></span>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <div class="phead"><h2>Assignments &amp; tests</h2>
+          <span class="hint">Homework, assignments, exams &mdash; everything school.</span></div>
+        <div class="tasklist" id="schoolList"></div>
+      </div>
+    </section>
+
+    <!-- VANTALYNE -->
+    <section class="view" id="v-vantalyne">
+      <div class="tasktool">
+        <select id="vCat">
+          <option value="all">All categories</option>
+          <option value="Deck">Deck</option>
+          <option value="Storysquad">Storysquad</option>
+          <option value="Social">Social</option>
+          <option value="Content">Content</option>
+          <option value="Other">Other</option>
+        </select>
+        <select id="vFilter">
+          <option value="all">All</option>
+          <option value="open">Not done</option>
+          <option value="overdue">Overdue</option>
+          <option value="done">Done</option>
+        </select>
+        <select id="vPriority">
+          <option value="0">Any priority</option>
+          <option value="3">High</option>
+          <option value="2">Medium</option>
+          <option value="1">Low</option>
+        </select>
+        <button id="addVantalyne" class="primary">+ Add</button>
+        <span class="count" id="vCount"></span>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <div class="phead"><h2>Vantalyne work</h2>
+          <span class="hint">Decks, storysquads, social, content &mdash; stay on top of everything.</span></div>
+        <div class="tasklist" id="vList"></div>
+      </div>
+    </section>
+
+    <!-- WHERE I'M AT -->
+    <section class="view" id="v-where">
+      <div class="phead"><h2>Where I'm at</h2>
+        <span class="hint">The system reads the sheet and tells you what needs fixing &mdash; and what to do about it.</span></div>
+      <div class="honesty" id="honestyBox"></div>
+      <div class="acards" id="acards"></div>
+    </section>
+
+    <!-- PARENT REPORT -->
+    <section class="view" id="v-report">
+      <div class="phead"><h2>Parent Report</h2>
+        <span class="hint" id="reportHint">Read-only &mdash; nothing here can be edited.</span></div>
+      <div class="honesty" id="reportHonesty"></div>
+      <div class="stats" id="reportStats"></div>
+      <div class="panel">
+        <div class="phead"><h2>Last 8 weeks</h2><span class="hint">Green = kept the promise. Red = slipped.</span></div>
+        <div class="cal-wrap"><div class="cal" id="calR"></div></div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Week verdicts</h2></div>
+        <div id="weeksR"></div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Academics</h2></div>
+        <div class="charts">
+          <div class="chart-box">
+            <h3>Mock scores</h3>
+            <div id="mockChartWrapR"><canvas id="mockChartR"></canvas></div>
+          </div>
+          <div class="chart-box">
+            <h3>Study hours &mdash; last 14 days</h3>
+            <div id="hoursChartWrapR"><canvas id="hoursChartR"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phead"><h2>Where he stands</h2><span class="hint">The same analysis he sees &mdash; nothing hidden.</span></div>
+        <div class="acards" id="reportAcards"></div>
+      </div>
+      <div class="ro-note" id="roNote"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p class="promise">&ldquo;If a week goes red, it goes red on the sheet before you ever ask &mdash; and I act. That's the deal.&rdquo;</p>
+    <p>The Sheet &middot; Aadyant Srivastava &middot; live link &mdash; checked from any phone</p>
+  </footer>
+</div>
+
+<!-- ============ DAILY LOG MODAL ============ -->
+<div class="modal" id="modal">
+  <div class="mcard">
+    <h3 id="mTitle">Log the day</h3>
+    <div class="mdate" id="mDate"></div>
+
+    <div class="field">
+      <label>1 &middot; Wake up time (window 6:00 &ndash; 8:30)</label>
+      <input type="time" id="fWake">
+    </div>
+
+    <div class="field" id="schoolField">
+      <label>2 &middot; Did you go to school? (weekday)</label>
+      <div class="yn">
+        <button id="schYes">Yes</button>
+        <button id="schNo">No</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>3 &middot; Any complaints from a teacher?</label>
+      <div class="yn">
+        <button id="compYes">Yes</button>
+        <button id="compNo">No</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>4 &middot; Study hours today</label>
+      <input type="number" id="fHours" min="0" max="24" step="0.5" placeholder="e.g. 4">
+    </div>
+
+    <div class="field">
+      <label>5 &middot; What did I study? (the quality of it)</label>
+      <textarea id="fStudy" placeholder="e.g. Pol Sci long answers 2 hrs &mdash; real focus, not half-hearted"></textarea>
+      <div class="chips" id="qualChips" style="margin-top:10px"></div>
+    </div>
+
+    <div class="field">
+      <label>6 &middot; Mocks given today (CLAT / SAT / Monday test)</label>
+      <div id="mockList"></div>
+      <button id="addMock" style="margin-top:6px">+ Add a mock</button>
+    </div>
+
+    <div class="verdictbox" id="verdictBox"></div>
+
+    <div class="mrow">
+      <button id="mSave" class="primary">Save</button>
+      <button id="mDelete" class="danger">Delete entry</button>
+      <button id="mCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TASK MODAL ============ -->
+<div class="modal" id="taskModal">
+  <div class="mcard">
+    <h3 id="tmTitle">Task</h3>
+    <div class="mdate" id="tmSub"></div>
+
+    <div class="field">
+      <label id="tmField1">Title</label>
+      <input type="text" id="tmTitleI" placeholder="e.g. History chapter 4 questions">
+    </div>
+
+    <div class="frow2">
+      <div class="field">
+        <label id="tmField2">Subject</label>
+        <select id="tmSubj">
+          <option value="English">English</option>
+          <option value="Pol Sci">Pol Sci</option>
+          <option value="History">History</option>
+          <option value="Economics">Economics</option>
+          <option value="Maths">Maths</option>
+          <option value="CLAT Prep">CLAT Prep</option>
+          <option value="SAT Prep">SAT Prep</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Due</label>
+        <input type="date" id="tmDue">
+      </div>
+    </div>
+
+    <div class="frow2" id="tmExtras">
+      <div class="field">
+        <label>Status</label>
+        <select id="tmStatus">
+          <option value="pending">Not started</option>
+          <option value="progress">In progress</option>
+          <option value="done">Done</option>
+          <option value="slipped">Slipped</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="tmPriority">
+          <option value="3">High</option>
+          <option value="2" selected>Medium</option>
+          <option value="1">Low</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="tmNotes" placeholder="Optional &mdash; what's needed to finish it"></textarea>
+    </div>
+
+    <div class="mrow">
+      <button id="tmSave" class="primary">Save</button>
+      <button id="tmDelete" class="danger">Delete</button>
+      <button id="tmCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ============ CONFIG — paste your Supabase keys here ============ */
+  var CONFIG = {
+    url: "https://olwllrznatjumqfqjkxi.supabase.co",
+    anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sd2xscnpuYXRqdW1xZnFqa3hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0MzY1MzQsImV4cCI6MjEwMjAxMjUzNH0.Ru8m0DgSxIdX8DWhs8l_8crY1qfcY7NTQ9fkfgJsT_M"
+  };
+  var EMAILS = {
+    aadyant: "aadyant@thesheet.live",
+    parent:  "parent@thesheet.live"
+  };
+
+  var supabase = null;
+  var role = null;                 // 'aadyant' | 'parent'
+  var state = { entries: {}, tasks: [] };
+  var STUDY_TARGET = 3;
+  var WAKE_MIN = "06:00", WAKE_MAX = "08:30";
+  var STATUS_LABEL = { pending:"Not started", progress:"In progress", done:"Done", slipped:"Slipped" };
+  var STATUS_NEXT  = { pending:"progress", progress:"done", done:"done", slipped:"progress" };
+  var PRIO_LABEL = { "3":"High", "2":"Medium", "1":"Low" };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  function pad(n){ return (n<10?"0":"")+n; }
+  function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function todayIso(){ return iso(new Date()); }
+  function parseIso(s){ var p=s.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+  function pretty(s){ var d=parseIso(s); return DAYS[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear(); }
+  function shortDate(d){ return d.getDate()+" "+MONTHS[d.getMonth()]; }
+  function startOfWeek(d){ var x=new Date(d); var w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x; }
+  function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function sameDay(a,b){ return iso(a)===iso(b); }
+  function isWeekend(d){ var w=d.getDay(); return w===0||w===6; }
+  function esc(t){ var d=document.createElement("div"); d.textContent=(t==null?"":String(t)); return d.innerHTML; }
+  function getE(s){ return state.entries[s] || null; }
+
+  /* ============ TOAST ============ */
+  var toastTimer=null;
+  function toast(msg){
+    var t=$("toast"); t.textContent=msg; t.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ t.classList.remove("show"); }, 2600);
+  }
+
+  /* ============ SUPABASE INIT ============ */
+  function isConfigured(){
+    return CONFIG.url.indexOf("PASTE_")<0 && CONFIG.anon.indexOf("PASTE_")<0;
+  }
+  function initSupabase(){
+    if (!window.supabase){ $("lockFoot").textContent="Couldn't load the database client — check your internet and reload."; return false; }
+    if (!isConfigured()){ $("lockFoot").textContent="Not configured yet — paste the Supabase URL + anon key into the app."; return false; }
+    supabase = window.supabase.createClient(CONFIG.url, CONFIG.anon, { auth:{ persistSession:true, autoRefreshToken:true } });
+    return true;
+  }
+
+  /* ============ AUTH ============ */
+  function roleForEmail(email){
+    if (email === EMAILS.parent) return "parent";
+    if (email === EMAILS.aadyant) return "aadyant";
+    return null;
+  }
+  function lockError(msg){
+    var e=$("loginErr"); e.textContent=msg;
+    var old=document.querySelector(".lerr:not(#loginErr)"); if (old) old.remove();
+  }
+  function clearLockError(){
+    $("loginErr").textContent="";
+    var old=document.querySelector(".lerr:not(#loginErr)"); if (old) old.remove();
+  }
+  var pendingRole=null;
+  var doors=document.querySelectorAll(".ldoor");
+  for (var i=0;i<doors.length;i++) doors[i].addEventListener("click", function(){
+    pendingRole=this.getAttribute("data-role");
+    $("loginEmail").innerHTML = "Logging in as <b>"+esc(EMAILS[pendingRole])+"</b>";
+    $("loginCard").style.display="block";
+    $("loginPass").value="";
+    clearLockError();
+    $("loginPass").focus();
+  });
+  $("loginBack").addEventListener("click", function(){
+    $("loginCard").style.display="none";
+    $("loginPass").value=""; clearLockError();
+  });
+  $("loginBtn").addEventListener("click", doLogin);
+  $("loginPass").addEventListener("keydown", function(ev){ if (ev.key==="Enter") doLogin(); });
+
+  function doLogin(){
+    if (!supabase){ toast("Database not initialised."); return; }
+    if (!pendingRole){ toast("Pick a door first."); return; }
+    var pass=$("loginPass").value;
+    if (!pass){ lockError("Type the password."); return; }
+    $("loginBtn").disabled=true; $("loginBtn").textContent="Checking\u2026";
+    supabase.auth.signInWithPassword({ email: EMAILS[pendingRole], password: pass }).then(function(res){
+      $("loginBtn").disabled=false; $("loginBtn").textContent="Unlock";
+      if (res.error){ lockError(res.error.message==="Invalid login credentials" ? "Wrong password. Try again." : res.error.message); return; }
+      var r = roleForEmail(res.data.user.email);
+      if (!r){ supabase.auth.signOut(); lockError("This account isn't linked to a role."); return; }
+      enterApp(r);
+    });
+  }
+  $("logoutBtn").addEventListener("click", function(){
+    supabase.auth.signOut().then(function(){ leaveApp(); });
+  });
+
+  /* ============ ENTER / LEAVE APP ============ */
+  function enterApp(r){
+    role = r;
+    $("lockScreen").style.display="none";
+    $("app").style.display="block";
+    var isP = r==="parent";
+    $("whoBox").className = "who"+(isP?" p":"");
+    $("whoName").textContent = isP ? "Parent" : "Aadyant";
+    $("appTag").textContent = isP
+      ? "Read-only report \u2014 the live version of the promise."
+      : "Not a Failure. A Plan. A Promise. \u2014 the system judges each day.";
+    $("logToday").style.display = isP ? "none" : "inline-block";
+    // tabs: parent sees only the report
+    var tabs=["daily","school","vantalyne","where","report"];
+    for (var i=0;i<tabs.length;i++){
+      var t=$("tab-"+tabs[i]); if (!t) continue;
+      t.style.display = isP ? "none" : "inline-block";
+      if (isP) t.classList.remove("on");
+    }
+    if (isP){ $("tab-report").style.display="inline-block"; $("tab-report").classList.add("on"); }
+    $("roNote").textContent = isP ? "Nothing on this page can be edited. This is the honest, live record." : "";
+    loadAll().then(function(){
+      renderAll();
+      if (isP) switchView("report"); else switchView("daily");
+    }).catch(function(err){ toast("Couldn't load data: "+err.message); });
+  }
+  function leaveApp(){
+    role=null; state={entries:{},tasks:[]};
+    $("app").style.display="none";
+    $("lockScreen").style.display="flex";
+    $("loginCard").style.display="none";
+    $("loginPass").value="";
+  }
+  function switchView(name){
+    var views=["daily","school","vantalyne","where","report"];
+    for (var i=0;i<views.length;i++){
+      var v=$("v-"+views[i]); if (v) v.classList.remove("on");
+      var t=$("tab-"+views[i]); if (t) t.classList.remove("on");
+    }
+    var vv=$("v-"+name), tt=$("tab-"+name);
+    if (vv) vv.classList.add("on");
+    if (tt) tt.classList.add("on");
+    if (name==="where") renderWhere();
+    if (name==="report") renderReport();
+    if (name==="school") renderSchool();
+    if (name==="vantalyne") renderVantalyne();
+    if (name==="daily") renderAll();
+    if (name==="where"||name==="report"){ setTimeout(renderCharts, 60); }
+    if (name==="report"){ setTimeout(function(){ renderChartsR(); }, 60); }
+  }
+  var tabBtns=document.querySelectorAll(".tab");
+  for (var i2=0;i2<tabBtns.length;i2++) tabBtns[i2].addEventListener("click", function(){
+    switchView(this.getAttribute("data-view"));
+  });
+
+  /* ============ STORE ============ */
+  function loadAll(){
+    return Promise.all([
+      supabase.from("entries").select("*"),
+      supabase.from("tasks").select("*").order("created_at", { ascending:true })
+    ]).then(function(res){
+      var e=res[0], t=res[1];
+      if (e.error) throw e.error;
+      if (t.error) throw t.error;
+      state.entries={};
+      (e.data||[]).forEach(function(r){ state.entries[r.date]=r; });
+      state.tasks=t.data||[];
+    });
+  }
+  function apiUpsertEntry(entry){
+    return supabase.from("entries").upsert(entry).then(function(res){
+      if (res.error) throw res.error;
+      state.entries[entry.date]=entry;
+      renderAll();
+    });
+  }
+  function apiDeleteEntry(dateStr){
+    return supabase.from("entries").delete().eq("date", dateStr).then(function(res){
+      if (res.error) throw res.error;
+      delete state.entries[dateStr];
+      renderAll();
+    });
+  }
+  function apiUpsertTask(task){
+    return supabase.from("tasks").upsert(task).then(function(res){
+      if (res.error) throw res.error;
+      return loadAll().then(renderAll);
+    });
+  }
+  function apiDeleteTask(id){
+    return supabase.from("tasks").delete().eq("id", id).then(function(res){
+      if (res.error) throw res.error;
+      return loadAll().then(renderAll);
+    });
+  }
+  function apiSetTaskStatus(id, status){
+    return supabase.from("tasks").update({ status:status, done_at: status==="done" ? new Date().toISOString() : null })
+      .eq("id", id).then(function(res){
+        if (res.error) throw res.error;
+        return loadAll().then(renderAll);
+      });
+  }
+  /* ============ VERDICT ENGINE (the system decides) ============ */
+  function criteriaFor(dateStr){
+    var d = parseIso(dateStr);
+    var e = getE(dateStr) || {};
+    var weekend = isWeekend(d);
+    var c = [];
+    var wakeOk = !!(e.wake && e.wake >= WAKE_MIN && e.wake <= WAKE_MAX);
+    c.push({ key:"wake", label:"Wake on time", ok: wakeOk, detail: e.wake ? "woke at "+e.wake : "wake time not logged" });
+    if (weekend) {
+      c.push({ key:"school", label:"School (weekend)", ok:true, detail:"weekend \u2014 not required", na:true });
+    } else {
+      c.push({ key:"school", label:"Went to school", ok: e.school===true, detail: e.school===true ? "attended" : (e.school===false ? "did not go" : "not logged") });
+    }
+    c.push({ key:"comp", label:"No complaints", ok: e.complaints===false, detail: e.complaints===true ? "a teacher complained" : (e.complaints===false ? "no complaints" : "not logged") });
+    c.push({ key:"hours", label:"Study "+STUDY_TARGET+"h+", ok: !!(e.hours!=null && e.hours>=STUDY_TARGET), detail: e.hours!=null ? (e.hours+"h logged") : "hours not logged" });
+    var missed = c.filter(function(x){ return !x.ok; });
+    return { criteria: c, green: missed.length===0, missed: missed };
+  }
+  function verdictFor(dateStr){
+    return criteriaFor(dateStr).green ? "good" : "slip";
+  }
+
+  /* ============ STATS ============ */
+  function computeStats(){
+    var today = new Date();
+    var goodCount=0, slipCount=0, mockCount=0;
+    for (var k in state.entries){
+      var e = state.entries[k]; if (!e) continue;
+      if (e.mocks) mockCount += e.mocks.length;
+      if (verdictFor(k)==="good") goodCount++; else slipCount++;
+    }
+    var streak=0, cur=new Date(today);
+    if (!getE(iso(cur))) cur=addDays(cur,-1);
+    while (getE(iso(cur)) && verdictFor(iso(cur))==="good"){ streak++; cur=addDays(cur,-1); }
+    var wkStart=startOfWeek(today), wkGood=0, wkLog=0;
+    for (var i=0;i<7;i++){ var d=addDays(wkStart,i); if (d>today) break; var dd=iso(d); if (getE(dd)){ wkLog++; if (verdictFor(dd)==="good") wkGood++; } }
+    var pct = wkLog ? Math.round(wkGood/wkLog*100) : 0;
+    return { goodCount:goodCount, slipCount:slipCount, streak:streak, wkGood:wkGood, wkLog:wkLog, pct:pct, mockCount:mockCount };
+  }
+  function statCard(lbl, sub, val, cls, sub2){
+    return '<div class="stat"><div class="lbl">'+lbl+'</div><div class="val '+cls+'">'+val+'</div><div class="sub">'+sub+' \u2014 '+sub2+'</div></div>';
+  }
+  function renderStatsInto(id){
+    var s=computeStats();
+    $(id).innerHTML =
+      statCard("Current streak","good days in a row", s.streak, s.streak>0?"green":"", s.streak>0?("running since "+shortDate(addDays(new Date(),-s.streak+1))):"starts tonight")+
+      statCard("Good days","system judged kept", s.goodCount, "green", "green on the sheet")+
+      statCard("Slip days","logged honestly", s.slipCount, s.slipCount>0?"red":"", "before anyone asks")+
+      statCard("This week","Mon \u2013 today", s.wkLog? (s.wkGood+"/"+s.wkLog+" good") : "0 / 0", s.pct>=70?"green":(s.pct>=40?"ember":"red"), s.wkLog? (s.pct+"% kept") : "no entries yet");
+  }
+
+  /* ============ HONESTY METRIC ============ */
+  function honestyMetric(){
+    var today=new Date();
+    var keys=Object.keys(state.entries).filter(function(k){ return parseIso(k)<=today; });
+    if (!keys.length) return { pct:0, logged:0, total:0, first:null, d:new Date() };
+    var first=keys.slice().sort()[0];
+    var start=parseIso(first), total=0;
+    for (var d=new Date(start); d<=today; d=addDays(d,1)) total++;
+    return { pct: Math.round(keys.length/total*100), logged: keys.length, total: total, first: first, d: start };
+  }
+  function renderHonestyInto(id){
+    var h=honestyMetric();
+    var cls = h.pct>=80 ? "g" : (h.pct>=50 ? "e" : "r");
+    var line = h.logged===0
+      ? "Nothing logged yet \u2014 the honesty score starts with the first day you log."
+      : h.pct>=80 ? "He logs almost every day. That\u2019s the habit the whole promise rests on."
+      : h.pct>=50 ? "Logged "+h.logged+" of "+h.total+" days since "+shortDate(h.d)+" \u2014 room to grow."
+      : "Only "+h.logged+" of "+h.total+" eligible days logged since "+shortDate(h.d)+" \u2014 the sheet only works when it\u2019s full.";
+    $(id).innerHTML = '<div class="hn '+cls+'">'+h.pct+'%</div>'+
+      '<div><div class="ht">Honesty score \u2014 days logged vs days eligible</div>'+
+      '<div class="hs">'+line+'</div></div>';
+  }
+
+  /* ============ CALENDAR (generic) ============ */
+  function renderCal(id, readOnly){
+    var el=$(id); if (!el) return;
+    var today = new Date();
+    var start = startOfWeek(addDays(today,-7*8+1));
+    var html = '<div class="day-label"></div>';
+    var lastMonth="";
+    for (var w=0; w<8; w++){
+      var wkStart = addDays(start, w*7);
+      var m = MONTHS[wkStart.getMonth()]+" "+wkStart.getFullYear();
+      if (m!==lastMonth){ lastMonth=m; html += '<div class="month-tag">'+m+'</div>'; } else { html += '<div class="month-tag"></div>'; }
+    }
+    for (var d=0; d<7; d++){
+      html += '<div class="day-label">'+["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][d]+'</div>';
+      for (var w=0; w<8; w++){
+        var day = addDays(start, w*7+d);
+        var s = iso(day);
+        var cls = "cell";
+        if (day > today) cls += " future";
+        else if (getE(s)) cls += (verdictFor(s)==="good" ? " good" : " slip");
+        else cls += " empty";
+        if (sameDay(day,today)) cls += " today";
+        if (readOnly) cls += " ro";
+        var e=getE(s), tip=pretty(s);
+        if (e){ var v=criteriaFor(s); tip += " \u2014 "+ (v.green?"kept it":"slipped") + (e.hours!=null?" \u00b7 "+e.hours+"h":"") + (e.wake?" \u00b7 woke "+e.wake:""); }
+        html += '<div class="'+cls+'" data-date="'+s+'" title="'+tip+'">'+day.getDate()+'</div>';
+      }
+    }
+    el.innerHTML = html;
+    if (!readOnly){
+      var cells = el.querySelectorAll(".cell:not(.future)");
+      for (var i=0;i<cells.length;i++) cells[i].addEventListener("click", function(){ openModal(this.getAttribute("data-date")); });
+    }
+  }
+
+  /* ============ WEEK VERDICTS (generic) ============ */
+  function renderWeeksInto(id){
+    var el=$(id); if (!el) return;
+    var today = new Date();
+    var start = startOfWeek(addDays(today,-7*5));
+    var html = "";
+    for (var w=0; w<6; w++){
+      var wkStart = addDays(start, w*7);
+      var wkEnd = addDays(wkStart,6);
+      var label = (wkStart.getDate()+" "+MONTHS[wkStart.getMonth()]).toUpperCase();
+      var dots="", good=0, slip=0, log=0;
+      for (var d=0; d<7; d++){
+        var day=addDays(wkStart,d); var s=iso(day); var e=getE(s);
+        var cls="u", t="not logged";
+        if (e){ log++; var v=verdictFor(s); if (v==="good"){ cls="g"; good++; t="kept it"; } else { cls="s"; slip++; t="slipped"; } }
+        dots += '<span class="'+cls+'" title="'+pretty(s)+' \u2014 '+t+'"></span>';
+      }
+      var vd, vcls;
+      if (wkEnd > today){ vd = log ? ("IN PROGRESS \u00b7 "+good+"/"+log+" good") : "IN PROGRESS"; vcls="blank"; }
+      else if (!log){ vd="NO ENTRIES"; vcls="blank"; }
+      else if (slip===0){ vd="CLEAN WEEK"; vcls="on"; }
+      else if (slip===1){ vd="ONE SLIP"; vcls="warn"; }
+      else { vd="SLIPPED \u00b7 "+slip+" days"; vcls="bad"; }
+      html += '<div class="wrow"><div class="wl">'+label+'</div><div class="dots">'+dots+'</div><div class="vd '+vcls+'">'+vd+'</div></div>';
+    }
+    el.innerHTML = html;
+  }
+  /* ============ ENTRIES LIST ============ */
+  function critHtml(c){
+    var s = '<div class="crit">';
+    for (var i=0;i<c.length;i++){
+      var x=c[i];
+      if (x.na){ s += '<span class="na">'+x.label+': '+x.detail+'</span>'; }
+      else if (x.ok){ s += '<span class="ok">\u2713 '+x.label+'</span>'; }
+      else { s += '<span class="no">\u2717 '+x.label+' ('+x.detail+')</span>'; }
+    }
+    return s + '</div>';
+  }
+  function mockHtml(mocks){
+    if (!mocks || !mocks.length) return "";
+    var s = '<div class="meta">';
+    for (var i=0;i<mocks.length;i++) s += 'Mock: <b style="color:var(--cream)">'+esc(mocks[i].name)+'</b> \u2014 '+esc(mocks[i].score)+' &nbsp;\u00b7&nbsp; ';
+    return s + '</div>';
+  }
+  function qualName(q){ return ["","Rough","Okay","Good","Great"][q]||""; }
+  function renderEntries(){
+    var el=$("entries"); if (!el) return;
+    var keys = Object.keys(state.entries).sort().reverse();
+    if (!keys.length){
+      el.innerHTML = '<div class="empty"><div class="big">\u2726</div>No entries yet. Log today &mdash; the sheet only works when it\u2019s honest.</div>';
+      return;
+    }
+    var html="";
+    for (var i=0;i<keys.length;i++){
+      var s=keys[i]; var e=state.entries[s]; var v=verdictFor(s);
+      var dotCls = v==="good"?"g":"s";
+      var badge = v==="good"?'<span class="badge g">KEPT IT</span>':'<span class="badge s">SLIPPED</span>';
+      var crit = critHtml(criteriaFor(s).criteria);
+      var meta = [];
+      if (e.hours!=null) meta.push("Study: "+e.hours+"h");
+      if (e.wake) meta.push("Woke: "+e.wake);
+      if (e.quality) meta.push("Quality: "+qualName(e.quality));
+      var m = mockHtml(e.mocks);
+      html += '<div class="entry"><div class="dot '+dotCls+'"></div><div class="bd">'+
+        '<div class="date">'+pretty(s)+'</div>'+badge+crit+
+        (meta.length?'<div class="meta">'+meta.join(' &nbsp;\u00b7&nbsp; ')+'</div>':'')+m+
+        (e.study?'<div class="notes">'+esc(e.study)+'</div>':'')+
+        '</div><div class="acts">'+
+        '<button data-edit="'+s+'">Edit</button><button data-del="'+s+'" class="danger">Delete</button>'+
+        '</div></div>';
+    }
+    el.innerHTML = html;
+    var edits=el.querySelectorAll("[data-edit]"), dels=el.querySelectorAll("[data-del]");
+    for (var a=0;a<edits.length;a++) edits[a].addEventListener("click", function(){ openModal(this.getAttribute("data-edit")); });
+    for (var b=0;b<dels.length;b++) dels[b].addEventListener("click", function(){
+      var s=this.getAttribute("data-del");
+      if (confirm("Delete the entry for "+pretty(s)+"?")){
+        apiDeleteEntry(s).catch(function(err){ toast("Delete failed: "+err.message); });
+      }
+    });
+  }
+
+  /* ============ DAILY LOG MODAL ============ */
+  var currentDate=null, schoolSel=null, compSel=null, qualSel=null, mocks=[];
+  function openModal(s){
+    currentDate=s; var e=getE(s)||{};
+    schoolSel = (e.school==null)?null:e.school;
+    compSel = (e.complaints==null)?null:e.complaints;
+    qualSel = (e.quality==null)?null:e.quality;
+    mocks = e.mocks ? e.mocks.map(function(m){return {name:m.name,score:m.score};}) : [];
+    $("mTitle").textContent = sameDay(parseIso(s),new Date()) ? "Log today" : "Log the day";
+    $("mDate").textContent = pretty(s);
+    $("fWake").value = e.wake||"";
+    $("fHours").value = e.hours!=null?e.hours:"";
+    $("fStudy").value = e.study||"";
+    $("mDelete").style.display = getE(s)?"inline-block":"none";
+    var weekend = isWeekend(parseIso(s));
+    $("schoolField").style.display = weekend ? "none" : "block";
+    if (weekend) schoolSel = null;
+    renderSchool(); renderComp(); renderQual(); renderMocks(); updateVerdict();
+    $("modal").classList.add("open");
+  }
+  function renderSchool(){
+    $("schYes").style.outline = schoolSel===true ? "2px solid var(--cream)" : "none";
+    $("schNo").style.outline = schoolSel===false ? "2px solid var(--cream)" : "none";
+  }
+  function renderComp(){
+    $("compYes").style.outline = compSel===true ? "2px solid var(--cream)" : "none";
+    $("compNo").style.outline = compSel===false ? "2px solid var(--cream)" : "none";
+  }
+  function renderQual(){
+    var html="", names=["Rough","Okay","Good","Great"];
+    for (var i=1;i<=4;i++) html += '<div class="chip'+(qualSel===i?' on':'')+'" data-q="'+i+'">'+names[i-1]+'</div>';
+    $("qualChips").innerHTML=html;
+    var cs=document.querySelectorAll("#qualChips .chip");
+    for (var j=0;j<cs.length;j++) cs[j].addEventListener("click", function(){ qualSel=+this.getAttribute("data-q"); renderQual(); });
+  }
+  function renderMocks(){
+    var html="";
+    for (var i=0;i<mocks.length;i++){
+      html += '<div class="mockrow">'+
+        '<input type="text" placeholder="Test (CLAT / SAT / Monday)" value="'+esc(mocks[i].name)+'" data-mi="'+i+'">'+
+        '<input type="number" placeholder="Score" value="'+esc(mocks[i].score)+'" data-ms="'+i+'">'+
+        '<button data-mr="'+i+'" class="danger">\u00d7</button></div>';
+    }
+    $("mockList").innerHTML=html || '<div class="empty" style="padding:10px">No mocks today</div>';
+    var ns=document.querySelectorAll("[data-mi]"), ss=document.querySelectorAll("[data-ms]"), rs=document.querySelectorAll("[data-mr]");
+    for (var a=0;a<ns.length;a++) ns[a].addEventListener("input", function(){ mocks[+this.getAttribute("data-mi")].name=this.value; });
+    for (var b=0;b<ss.length;b++) ss[b].addEventListener("input", function(){ mocks[+this.getAttribute("data-ms")].score=this.value; });
+    for (var c=0;c<rs.length;c++) rs[c].addEventListener("click", function(){ mocks.splice(+this.getAttribute("data-mr"),1); renderMocks(); });
+  }
+  function updateVerdict(){
+    var box=$("verdictBox");
+    var e0 = getE(currentDate)||{};
+    state.entries[currentDate]=draftEntry();
+    var v = criteriaFor(currentDate);
+    state.entries[currentDate]=e0; // restore — nothing saved yet
+    if (v.green){
+      box.className="verdictbox g";
+      box.innerHTML = "VERDICT: GREEN \u2014 this day counts as kept."+'<div class="why">All criteria met: on time, school, no complaints, study done.</div>';
+    } else {
+      box.className="verdictbox s";
+      var why = v.missed.map(function(m){ return m.label+(m.detail?" \u2014 "+m.detail:""); }).join(" \u00b7 ");
+      box.innerHTML = "VERDICT: RED \u2014 this day counts as a slip."+'<div class="why">'+why+'</div>';
+    }
+  }
+  function draftEntry(){
+    var hours = parseFloat($("fHours").value);
+    var wake = $("fWake").value || null;
+    var weekend = isWeekend(parseIso(currentDate));
+    return {
+      date: currentDate,
+      wake: wake,
+      school: weekend ? null : schoolSel,
+      complaints: compSel,
+      hours: isNaN(hours)?null:hours,
+      study: $("fStudy").value.trim()||null,
+      quality: qualSel,
+      mocks: mocks.filter(function(m){ return m.name||m.score; }),
+      updated_at: new Date().toISOString()
+    };
+  }
+  $("schYes").addEventListener("click", function(){ schoolSel=true; renderSchool(); updateVerdict(); });
+  $("schNo").addEventListener("click", function(){ schoolSel=false; renderSchool(); updateVerdict(); });
+  $("compYes").addEventListener("click", function(){ compSel=true; renderComp(); updateVerdict(); });
+  $("compNo").addEventListener("click", function(){ compSel=false; renderComp(); updateVerdict(); });
+  $("addMock").addEventListener("click", function(){ mocks.push({name:"",score:""}); renderMocks(); });
+  $("fWake").addEventListener("change", updateVerdict);
+  $("fHours").addEventListener("input", updateVerdict);
+  $("mSave").addEventListener("click", function(){
+    if (!currentDate) return;
+    apiUpsertEntry(draftEntry()).then(function(){
+      toast("Saved \u2014 "+pretty(currentDate));
+      closeModal();
+    }).catch(function(err){ toast("Save failed: "+err.message); });
+  });
+  $("mDelete").addEventListener("click", function(){
+    if (currentDate && getE(currentDate) && confirm("Delete entry for "+pretty(currentDate)+"?")){
+      apiDeleteEntry(currentDate).then(closeModal).catch(function(err){ toast("Delete failed: "+err.message); });
+    }
+  });
+  $("mCancel").addEventListener("click", closeModal);
+  $("modal").addEventListener("click", function(ev){ if (ev.target===this) closeModal(); });
+  document.addEventListener("keydown", function(ev){ if (ev.key==="Escape"){ closeModal(); closeTaskModal(); } });
+  function closeModal(){ $("modal").classList.remove("open"); }
+  /* ============ TASK HELPERS ============ */
+  function taskIsDone(t){ return t.status==="done"; }
+  function taskIsOpen(t){ return t.status==="pending"||t.status==="progress"; }
+  function taskOverdue(t){ return !taskIsDone(t) && t.due && t.due < todayIso(); }
+  function statusBadge(t){
+    var s=t.status, cls=s, txt=STATUS_LABEL[s]||s;
+    if (taskOverdue(t)){ cls="over"; txt="OVERDUE"; }
+    return '<span class="st '+cls+'">'+txt+'</span>';
+  }
+  function dueText(t){
+    if (!t.due) return "no due date";
+    var d=parseIso(t.due), t2=new Date();
+    if (sameDay(d,t2)) return "due today";
+    if (d<t2) return "due "+pretty(t.due);
+    var diff=Math.round((d-t2)/86400000);
+    return diff===1?"due tomorrow":"due "+shortDate(d)+" ("+diff+"d)";
+  }
+  function taskRow(t, kind){
+    var over = taskOverdue(t);
+    var tcCls = taskIsDone(t) ? "done" : (over ? "slipd" : "");
+    var ttCls = (taskIsDone(t)?"done-t ":"")+(over?"over":"");
+    var sub=[];
+    if (kind==="school" && t.subject) sub.push('<span class="subj">'+esc(t.subject)+'</span>');
+    if (kind==="vantalyne" && t.project) sub.push('<span class="subj">'+esc(t.project)+'</span>');
+    sub.push('<span>'+dueText(t)+'</span>');
+    sub.push(statusBadge(t));
+    if (kind==="vantalyne" && t.priority) sub.push('<span><span class="pd '+{3:"h",2:"m",1:"l"}[t.priority]+'"></span>'+PRIO_LABEL[t.priority]+'</span>');
+    return '<div class="taskrow"><div class="tc '+tcCls+'" data-tc="'+t.id+'" title="toggle done"></div>'+
+      '<div class="tmain"><div class="tt '+ttCls+'">'+esc(t.title)+'</div>'+
+      '<div class="tsub">'+sub.join(' &nbsp;\u00b7&nbsp; ')+'</div>'+
+      (t.notes?'<div class="tnotes">'+esc(t.notes)+'</div>':'')+
+      '</div><div class="acts">'+
+      '<button data-te="'+t.id+'">Edit</button><button data-td="'+t.id+'" class="danger">Delete</button></div></div>';
+  }
+  function bindTaskList(el){
+    var tcs=el.querySelectorAll("[data-tc]"), tes=el.querySelectorAll("[data-te]"), tds=el.querySelectorAll("[data-td]");
+    for (var i=0;i<tcs.length;i++) tcs[i].addEventListener("click", function(){
+      var id=this.getAttribute("data-tc"), t=taskById(id); if (!t) return;
+      var next = t.status==="done" ? "pending" : "done";
+      apiSetTaskStatus(id, next).catch(function(err){ toast("Update failed: "+err.message); });
+    });
+    for (var j=0;j<tes.length;j++) tes[j].addEventListener("click", function(){ openTaskModal(null, taskById(this.getAttribute("data-te"))); });
+    for (var k=0;k<tds.length;k++) tds[k].addEventListener("click", function(){
+      var id=this.getAttribute("data-td");
+      if (confirm("Delete this task?")) apiDeleteTask(id).catch(function(err){ toast("Delete failed: "+err.message); });
+    });
+  }
+  function taskById(id){
+    for (var i=0;i<state.tasks.length;i++) if (state.tasks[i].id===id) return state.tasks[i];
+    return null;
+  }
+  function sortedTasks(kind){
+    var arr=state.tasks.filter(function(t){ return t.kind===kind; });
+    arr.sort(function(a,b){
+      var ad=taskIsDone(a)?1:0, bd=taskIsDone(b)?1:0;
+      if (ad!==bd) return ad-bd;
+      if (taskOverdue(a)!==taskOverdue(b)) return taskOverdue(a)?-1:1;
+      if (a.due&&b.due) return a.due<b.due?-1:(a.due>b.due?1:0);
+      if (a.due) return -1; if (b.due) return 1;
+      return 0;
+    });
+    return arr;
+  }
+
+  /* ============ SCHOOL TAB ============ */
+  function renderPlate(){
+    var el=$("plate"); if (!el) return;
+    var today=new Date();
+    var dueSoon = state.tasks.filter(function(t){
+      return t.kind==="school" && taskIsOpen(t) && t.due && parseIso(t.due)<=today;
+    });
+    var html="";
+    if (!dueSoon.length){
+      var upcoming = state.tasks.filter(function(t){
+        return t.kind==="school" && taskIsOpen(t) && t.due;
+      }).filter(function(t){ return parseIso(t.due)>today; }).sort(function(a,b){ return a.due<b.due?-1:1; });
+      html = '<div class="pli">Nothing overdue or due today.</div>';
+      if (upcoming.length){
+        var nxt=upcoming.slice(0,3);
+        html += '<div class="pli">Up next: <b>'+nxt.map(function(t){ return esc(t.title); }).join('</b>, <b>')+'</b></div>';
+      }
+    } else {
+      dueSoon.sort(function(a,b){ return a.due<b.due?-1:1; });
+      html = dueSoon.map(function(t){
+        return '<div class="pli">'+(taskOverdue(t)?'<b>&#9888;</b> ':'')+'<b>'+esc(t.title)+'</b> &mdash; '+dueText(t)+(t.subject?' \u00b7 '+esc(t.subject):'')+'</div>';
+      }).join("");
+    }
+    el.innerHTML = html;
+  }
+  function renderSchool(){
+    var el=$("schoolList"); if (!el) return;
+    var flt=$("schoolFilter").value, sub=$("schoolSubject").value;
+    var arr=sortedTasks("school").filter(function(t){
+      if (sub!=="all" && t.subject!==sub) return false;
+      if (flt==="open") return taskIsOpen(t);
+      if (flt==="done") return taskIsDone(t);
+      if (flt==="overdue") return taskOverdue(t);
+      if (flt==="week"){
+        var end=addDays(startOfWeek(new Date()),6);
+        return t.due && parseIso(t.due)>=startOfWeek(new Date()) && parseIso(t.due)<=end;
+      }
+      return true;
+    });
+    $("schoolCount").textContent = arr.length+" shown \u00b7 "+state.tasks.filter(function(t){return t.kind==="school"&&taskIsOpen(t);}).length+" open";
+    if (!arr.length){
+      el.innerHTML = '<div class="empty"><div class="big">\u270E</div>Nothing here. Add your first school task &mdash; homework, assignments, tests.</div>';
+      return;
+    }
+    el.innerHTML = arr.map(function(t){ return taskRow(t,"school"); }).join("");
+    bindTaskList(el);
+    renderPlate();
+  }
+  $("schoolFilter").addEventListener("change", renderSchool);
+  $("schoolSubject").addEventListener("change", renderSchool);
+  $("addSchool").addEventListener("click", function(){ openTaskModal("school", null); });
+
+  /* ============ VANTALYNE TAB ============ */
+  function renderVantalyne(){
+    var el=$("vList"); if (!el) return;
+    var cat=$("vCat").value, flt=$("vFilter").value, pr=$("vPriority").value;
+    var arr=sortedTasks("vantalyne").filter(function(t){
+      if (cat!=="all" && (t.project||"Other")!==cat) return false;
+      if (pr!=="0" && String(t.priority)!==pr) return false;
+      if (flt==="open") return taskIsOpen(t);
+      if (flt==="done") return taskIsDone(t);
+      if (flt==="overdue") return taskOverdue(t);
+      return true;
+    });
+    $("vCount").textContent = arr.length+" shown \u00b7 "+state.tasks.filter(function(t){return t.kind==="vantalyne"&&taskIsOpen(t);}).length+" open";
+    if (!arr.length){
+      el.innerHTML = '<div class="empty"><div class="big">\u25C8</div>No Vantalyne tasks here. Add decks, storysquad runs, social posts &mdash; stay on top of it all.</div>';
+      return;
+    }
+    el.innerHTML = arr.map(function(t){ return taskRow(t,"vantalyne"); }).join("");
+    bindTaskList(el);
+  }
+  $("vCat").addEventListener("change", renderVantalyne);
+  $("vFilter").addEventListener("change", renderVantalyne);
+  $("vPriority").addEventListener("change", renderVantalyne);
+  $("addVantalyne").addEventListener("click", function(){ openTaskModal("vantalyne", null); });
+  /* ============ TASK MODAL ============ */
+  var editingTask=null; // { kind:'school'|'vantalyne', id:null|uuid }
+  var SCHOOL_SUBJECTS=["English","Pol Sci","History","Economics","Maths","CLAT Prep","SAT Prep"];
+  var VANT_CATS=["Deck","Storysquad","Social","Content","Other"];
+  function openTaskModal(kind, task){
+    editingTask = task ? { kind:kind, id:task.id } : { kind:kind, id:null };
+    var isS = kind==="school";
+    $("tmTitle").textContent = (task?"Edit ":"New ")+(isS?"school task":"Vantalyne task");
+    $("tmSub").textContent = isS ? "Assignments, homework, tests" : "Decks, storysquads, social, content";
+    $("tmField1").textContent = isS ? "Task" : "Task";
+    $("tmField2").textContent = isS ? "Subject" : "Category";
+    var opts = isS ? SCHOOL_SUBJECTS : VANT_CATS;
+    var cur = task ? (isS?task.subject:task.project) : (opts[0]);
+    var html="";
+    for (var i=0;i<opts.length;i++) html += '<option value="'+opts[i]+'"'+(cur===opts[i]?' selected':'')+'>'+opts[i]+'</option>';
+    $("tmSubj").innerHTML = html;
+    $("tmTitleI").value = task?task.title:"";
+    $("tmDue").value = task&&task.due?task.due:"";
+    $("tmStatus").value = task?task.status:"pending";
+    $("tmPriority").value = task&&task.priority?String(task.priority):"2";
+    $("tmNotes").value = task&&task.notes?task.notes:"";
+    $("tmDelete").style.display = task?"inline-block":"none";
+    $("taskModal").classList.add("open");
+    $("tmTitleI").focus();
+  }
+  function closeTaskModal(){ $("taskModal").classList.remove("open"); }
+  $("tmSave").addEventListener("click", function(){
+    if (!editingTask) return;
+    var title=$("tmTitleI").value.trim();
+    if (!title){ toast("Give the task a title."); return; }
+    var isS = editingTask.kind==="school";
+    var t = {
+      kind: editingTask.kind,
+      title: title,
+      subject: isS ? $("tmSubj").value : null,
+      project: isS ? null : $("tmSubj").value,
+      due: $("tmDue").value || null,
+      status: $("tmStatus").value,
+      priority: parseInt($("tmPriority").value,10)||2,
+      notes: $("tmNotes").value.trim()||null
+    };
+    if (editingTask.id) t.id = editingTask.id;
+    apiUpsertTask(t).then(function(){
+      toast("Saved task.");
+      closeTaskModal();
+    }).catch(function(err){ toast("Save failed: "+err.message); });
+  });
+  $("tmDelete").addEventListener("click", function(){
+    if (editingTask && editingTask.id && confirm("Delete this task?")){
+      apiDeleteTask(editingTask.id).then(closeTaskModal).catch(function(err){ toast("Delete failed: "+err.message); });
+    }
+  });
+  $("tmCancel").addEventListener("click", closeTaskModal);
+  $("taskModal").addEventListener("click", function(ev){ if (ev.target===this) closeTaskModal(); });
+  /* ============ WHERE I'M AT — ANALYSIS ENGINE ============ */
+  function daysSince(dateStr){
+    var d=parseIso(dateStr);
+    return Math.round((new Date() - d)/86400000);
+  }
+  function countLast(days, pred){
+    var c=0;
+    for (var i=0;i<days;i++){
+      var s=iso(addDays(new Date(),-i));
+      var e=getE(s);
+      if (e && pred(e, s)) c++;
+    }
+    return c;
+  }
+  function analyze(){
+    var cards=[];
+    // 1. attendance
+    var schoolDaysMissed = countLast(14, function(e,s){ return !isWeekend(parseIso(s)) && e.school===false; });
+    if (schoolDaysMissed===0) cards.push(card("g","Attendance","No school missed in 14 days","Every school day kept. This is the habit that rebuilt trust.","Keep the run going \u2014 full attendance this week too."));
+    else cards.push(card("r","Attendance","Missed "+schoolDaysMissed+" school day(s) in 2 weeks","Every miss is a mark against the promise.","Go 5/5 this week \u2014 no exceptions. Reply to the teachers you missed."));
+
+    // 2. wake
+    var wakeMisses = countLast(7, function(e){ return !(e.wake && e.wake>=WAKE_MIN && e.wake<=WAKE_MAX); });
+    var wakeClass = wakeMisses===0?"g":(wakeMisses<=2?"a":"r");
+    cards.push(card(wakeClass,"Wake","On time "+ (7-wakeMisses)+"/7 mornings", wakeMisses===0?"In the 6:00\u20138:30 window every day.":("Woke late or didn\u2019t log "+wakeMisses+" of the last 7 mornings."), wakeMisses===0?"Keep one alarm at 7:00 \u2014 protect the streak.":"Set one alarm at 7:00. Phone across the room. No snooze."));
+
+    // 3. complaints
+    var comps = countLast(7, function(e){ return e.complaints===true; });
+    var compClass = comps===0?"g":(comps===1?"a":"r");
+    cards.push(card(compClass,"Teacher complaints", comps+" in the last 7 days", comps===0?"No complaints logged \u2014 clean with the teachers.":("A teacher complained "+comps+" time(s) this week."), comps===0?"Keep replies respectful and work submitted early.":"Own it: apologise to the teacher, submit the missed work tonight."));
+
+    // 4. study hours
+    var hrs=[], sum=0;
+    for (var i=0;i<7;i++){
+      var e=getE(iso(addDays(new Date(),-i)));
+      if (e && e.hours!=null){ hrs.push(e.hours); sum+=e.hours; }
+    }
+    var avg = hrs.length ? Math.round(sum/hrs.length*10)/10 : 0;
+    var hrsClass = hrs.length===0?"r":(avg>=STUDY_TARGET?"g":(avg>=2?"a":"r"));
+    cards.push(card(hrsClass,"Study hours","Averaging "+avg+"h vs the "+STUDY_TARGET+"h target", hrs.length?("Over the "+hrs.length+" logged day(s) this week."):"No study hours logged this week.", avg>=STUDY_TARGET?"Keep the block. Push to 4h on tough days.":"Lock 8\u201311pm every night. Phone in the other room. Start with the hardest subject."));
+
+    // 5. mocks
+    var mockDays=[], lastMock=null;
+    for (var k in state.entries){
+      var e=state.entries[k];
+      if (e && e.mocks && e.mocks.length){ mockDays.push(k); }
+    }
+    mockDays.sort();
+    if (!mockDays.length){
+      cards.push(card("r","Mocks","No mocks logged yet","SAT is in September. The baseline doesn\u2019t exist until the first mock exists.","Give a Monday test this week \u2014 any subject. The first score sets the baseline."));
+    } else {
+      lastMock=mockDays[mockDays.length-1];
+      var gap=daysSince(lastMock);
+      var mClass = gap<=3?"g":(gap<=7?"a":"r");
+      var scores = mockDays.map(function(d){
+        return state.entries[d].mocks.map(function(m){ return {d:d, name:m.name, score:parseFloat(m.score)}; });
+      }).reduce(function(a,b){ return a.concat(b); },[]);
+      scores = scores.filter(function(m){ return !isNaN(m.score); }).sort(function(a,b){ return a.d<b.d?-1:1; });
+      var trend="";
+      if (scores.length>=2){
+        var lastS=scores[scores.length-1].score, prevS=scores[scores.length-2].score;
+        trend = lastS>prevS ? " \u2014 trending up." : (lastS<prevS ? " \u2014 dipped since last time." : " \u2014 flat since last time.");
+      } else { trend=" \u2014 one point so far."; }
+      cards.push(card(mClass,"Mocks","Last mock "+gap+" day(s) ago"+trend,"Latest: "+esc(scores[scores.length-1].name)+" \u2014 "+scores[scores.length-1].score+" on "+shortDate(parseIso(scores[scores.length-1].d))+"." , gap<=3?"Keep the cadence \u2014 one every few days.":"Monday test this week. Review the wrong ones the same evening."));
+    }
+
+    // 6. school tasks
+    var schoolOpen = state.tasks.filter(function(t){ return t.kind==="school" && taskIsOpen(t); });
+    var overdueS = schoolOpen.filter(taskOverdue);
+    if (overdueS.length===0){
+      cards.push(card("g","School work","No overdue assignments", schoolOpen.length? schoolOpen.length+" open task(s), all on schedule.":"No open school tasks \u2014 clear plate.","Keep it that way: the second a task arrives, it goes on the sheet."));
+    } else {
+      cards.push(card(overdueS.length<=2?"a":"r","School work",overdueS.length+" overdue assignment(s)","Listed in the School tab \u2014 they don\u2019t disappear by ignoring them.","Clear the "+overdueS.length+" overdue tonight, in due-date order."));
+    }
+
+    // 7. vantalyne
+    var vOpen = state.tasks.filter(function(t){ return t.kind==="vantalyne" && taskIsOpen(t); });
+    var vHigh = vOpen.filter(function(t){ return t.priority>=3 || taskOverdue(t); });
+    if (vHigh.length===0){
+      cards.push(card("g","Vantalyne work","No high-priority items hanging", vOpen.length? vOpen.length+" open task(s), none urgent.":"Nothing open \u2014 all clear.","Use the free time for a mock or SAT practice."));
+    } else {
+      var urgent = vHigh.filter(taskOverdue);
+      var vClass = urgent.length?"r":"a";
+      cards.push(card(vClass,"Vantalyne work",(urgent.length? urgent.length+" overdue":vHigh.length+" high-priority")+" item(s)","Vantalyne pays. These are the ones that matter.","Ship \u201c"+esc(vHigh[0].title)+"\u201d first \u2014 tonight if possible."));
+    }
+
+    return cards;
+  }
+  function card(cls, t, head, why, doWhat){
+    return { cls:cls, t:t, head:head, why:why, do:doWhat };
+  }
+  function acardHtml(c){
+    return '<div class="acard '+c.cls+'"><div class="at">'+c.t+'</div><div class="ah">'+c.head+'</div>'+
+      '<div class="aw">'+c.why+'</div><div class="ado"><b>Do this:</b> '+c.do+'</div></div>';
+  }
+  function renderAcardsInto(id){
+    var el=$(id); if (!el) return;
+    el.innerHTML = analyze().map(acardHtml).join("");
+  }
+  function renderWhere(){
+    renderHonestyInto("honestyBox");
+    renderAcardsInto("acards");
+  }
+
+  /* ============ PARENT REPORT ============ */
+  function renderReport(){
+    renderHonestyInto("reportHonesty");
+    renderStatsInto("reportStats");
+    renderCal("calR", true);
+    renderWeeksInto("weeksR");
+    renderAcardsInto("reportAcards");
+    renderChartsR();
+  }
+  /* ============ CHARTS (generic) ============ */
+  function setupCanvas(cv){
+    var dpr = window.devicePixelRatio||1;
+    var w = cv.clientWidth||600, h = cv.clientHeight||250;
+    cv.width = w*dpr; cv.height = h*dpr;
+    var ctx = cv.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  var MOCK_COLORS = { "SAT":"#e0876b", "CLAT":"#35c48b", "ACT":"#d4b86a" };
+  function mockColor(name){
+    var n=(name||"").toLowerCase();
+    for (var k in MOCK_COLORS){ if (n.indexOf(k.toLowerCase())>=0) return MOCK_COLORS[k]; }
+    return "#9db8cc";
+  }
+  function collectMockPoints(){
+    var pts=[];
+    var keys=Object.keys(state.entries).sort();
+    for (var i=0;i<keys.length;i++){
+      var e=state.entries[keys[i]];
+      if (e && e.mocks && e.mocks.length){
+        for (var j=0;j<e.mocks.length;j++){
+          var m=e.mocks[j];
+          if (m.name||m.score) pts.push({ d:parseIso(keys[i]), ds:keys[i], name:m.name||"Mock", score:parseFloat(m.score) });
+        }
+      }
+    }
+    pts.sort(function(a,b){ return a.d-b.d; });
+    return pts;
+  }
+  function renderMockChartInto(cvId, wrapId){
+    var box=$(wrapId); if (!box) return;
+    var pts=collectMockPoints();
+    if (pts.length<2){
+      box.innerHTML = '<div class="empty" style="padding:70px 20px">'+(pts.length===1
+        ? 'One mock so far \u2014 "'+esc(pts[0].name)+'" \u2014 '+pts[0].score+' &mdash; add the next one to start the line.'
+        : 'No mocks yet. Scores from CLAT, SAT and Monday tests build this graph.')+'</div>';
+      return;
+    }
+    box.innerHTML = '<canvas id="'+cvId+'"></canvas>';
+    var cv=$(cvId); var S=setupCanvas(cv); var ctx=S.ctx, w=S.w, h=S.h;
+    var padL=38, padR=14, padT=18, padB=26;
+    var iw=w-padL-padR, ih=h-padT-padB;
+    var min=Math.min.apply(null, pts.map(function(p){return p.score;}))-10;
+    var max=Math.max.apply(null, pts.map(function(p){return p.score;}))+10;
+    min=Math.max(0, Math.floor(min/10)*10); max=Math.ceil(max/10)*10;
+    if (max<=min) max=min+20;
+    var x=function(i){ return pts.length===1?padL+iw/2:padL+(iw*(i/(pts.length-1))); };
+    var y=function(v){ return padT+ih-((v-min)/(max-min))*ih; };
+    ctx.font="11px ui-sans-serif, system-ui"; ctx.textAlign="right"; ctx.textBaseline="middle";
+    var steps=4;
+    for (var g=0;g<=steps;g++){
+      var val=min+(max-min)*g/steps; var yy=y(val);
+      ctx.strokeStyle="rgba(157,184,204,.15)"; ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(w-padR,yy); ctx.stroke();
+      ctx.fillStyle="rgba(157,184,204,.8)"; ctx.fillText(Math.round(val)+"", padL-6, yy);
+    }
+    ctx.strokeStyle="rgba(157,184,204,.9)"; ctx.lineWidth=1.5; ctx.beginPath();
+    for (var i2=0;i2<pts.length;i2++){ var px=x(i2), py=y(pts[i2].score); if (i2===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+    ctx.stroke();
+    for (var i3=0;i3<pts.length;i3++){
+      var px2=x(i3), py2=y(pts[i3].score);
+      ctx.beginPath(); ctx.arc(px2,py2,4,0,Math.PI*2); ctx.fillStyle=mockColor(pts[i3].name); ctx.fill();
+      ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.lineWidth=1; ctx.stroke();
+      ctx.font="11px ui-sans-serif, system-ui"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+      ctx.fillStyle="rgba(255,246,231,.75)";
+      ctx.fillText(pts[i3].score, px2, py2-7);
+    }
+    var labelEvery = Math.max(1, Math.ceil(pts.length/6));
+    ctx.textBaseline="top";
+    for (var i4=0;i4<pts.length;i4+=labelEvery){
+      ctx.fillStyle="rgba(157,184,204,.7)";
+      ctx.fillText(shortDate(pts[i4].d), x(i4), padT+ih+6);
+    }
+  }
+  function renderHoursChartInto(cvId, wrapId){
+    var box=$(wrapId); if (!box) return;
+    var days=[], today=new Date();
+    for (var i=13;i>=0;i--){
+      var d=addDays(today,-i); var s=iso(d); var e=getE(s);
+      days.push({ d:d, s:s, h: e&&e.hours!=null?e.hours:0 });
+    }
+    var logged = days.filter(function(dd){ return dd.h>0; }).length;
+    if (!logged){
+      box.innerHTML = '<div class="empty" style="padding:70px 20px">Log study hours each day &mdash; the last 14 days build this chart.</div>';
+      return;
+    }
+    box.innerHTML = '<canvas id="'+cvId+'"></canvas>';
+    var cv=$(cvId); var S=setupCanvas(cv); var ctx=S.ctx, w=S.w, h=S.h;
+    var padL=34, padR=10, padT=18, padB=26;
+    var iw=w-padL-padR, ih=h-padT-padB;
+    var maxH = Math.max(STUDY_TARGET+1, Math.max.apply(null, days.map(function(d){return d.h;}))+1);
+    maxH=Math.ceil(maxH);
+    var bw=iw/days.length*0.62;
+    ctx.font="11px ui-sans-serif, system-ui"; ctx.textAlign="right"; ctx.textBaseline="middle";
+    for (var g=0; g<=maxH; g+=Math.max(1,Math.round(maxH/4))){
+      var yy=padT+ih-(g/maxH)*ih;
+      ctx.strokeStyle="rgba(157,184,204,.12)"; ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(w-padR,yy); ctx.stroke();
+      ctx.fillStyle="rgba(157,184,204,.8)"; ctx.fillText(g+"h", padL-6, yy);
+    }
+    var ty=padT+ih-(STUDY_TARGET/maxH)*ih;
+    ctx.strokeStyle="rgba(224,135,107,.8)"; ctx.setLineDash([4,4]); ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(padL,ty); ctx.lineTo(w-padR,ty); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="rgba(224,135,107,.9)"; ctx.textAlign="left"; ctx.textBaseline="bottom";
+    ctx.fillText(STUDY_TARGET+"h target", padL+2, ty-2);
+    for (var i2=0;i2<days.length;i2++){
+      var x=padL+(iw*i2/days.length)+iw/days.length/2-bw/2;
+      var bh=(days[i2].h/maxH)*ih;
+      var yy2=padT+ih-bh;
+      ctx.fillStyle = days[i2].h>0 ? (days[i2].h>=STUDY_TARGET?"#35c48b":"#521d21") : "rgba(255,255,255,.07)";
+      ctx.fillRect(x, yy2, bw, bh);
+      if (days[i2].h>0){
+        ctx.fillStyle="rgba(255,246,231,.8)"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+        ctx.fillText(Math.round(days[i2].h), x+bw/2, yy2-3);
+      }
+    }
+    ctx.textBaseline="top"; ctx.fillStyle="rgba(157,184,204,.6)";
+    for (var i3=0;i3<days.length;i3++){
+      var xl=padL+(iw*i3/days.length)+iw/days.length/2;
+      var d=days[i3].d;
+      var lbl = i3%2===0 ? (d.getDate()+" "+MONTHS[d.getMonth()]) : "";
+      ctx.textAlign="center"; ctx.fillText(lbl, xl, padT+ih+6);
+    }
+  }
+  function renderCharts(){
+    renderMockChartInto("mockChart","mockChartWrap");
+    renderHoursChartInto("hoursChart","hoursChartWrap");
+  }
+  function renderChartsR(){
+    renderMockChartInto("mockChartR","mockChartWrapR");
+    renderHoursChartInto("hoursChartR","hoursChartWrapR");
+  }
+
+  /* ============ RENDER ALL + BOOT ============ */
+  function renderAll(){
+    renderStatsInto("stats");
+    renderCal("cal", false);
+    renderWeeksInto("weeks");
+    renderEntries();
+    renderCharts();
+    renderSchool();
+    renderVantalyne();
+    renderWhere();
+  }
+  window.addEventListener("resize", function(){
+    if (!$("modal").classList.contains("open") && !$("taskModal").classList.contains("open")){
+      if ($("v-daily").classList.contains("on")) renderCharts();
+      if ($("v-report").classList.contains("on")) renderChartsR();
+    }
+  });
+
+  (function boot(){
+    if (!initSupabase()) return;
+    supabase.auth.getSession().then(function(res){
+      if (res.data && res.data.session){
+        var r = roleForEmail(res.data.session.user.email);
+        if (r) enterApp(r);
+      }
+    });
+  })();
+})();
+
+</script>
+</body>
+</html>

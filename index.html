@@ -97,7 +97,7 @@
   .stat .lbl{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);font-weight:700}
   .stat .val{font-size:36px;font-weight:800;margin-top:8px;line-height:1}
   .stat .sub{font-size:12px;color:var(--parch);margin-top:8px;opacity:.85}
-  .val.green{color:var(--good)} .val.red{color:var(--slip)} .val.ember{color:var(--ember)}
+  .val.green{color:var(--good)} .val.red{color:var(--slip)} .val.ember{color:var(--ember)} .val.amber{color:var(--amber)}
 
   /* ============ PANELS ============ */
   .panel{background:linear-gradient(170deg,rgba(27,62,88,.42),rgba(10,19,29,.6));
@@ -113,8 +113,13 @@
     display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,246,231,.35);
     cursor:pointer;transition:.15s;position:relative}
   .cell:hover{transform:scale(1.12);border-color:rgba(224,135,107,.7);z-index:2}
-  .cell.good{background:var(--good);color:#05271a;border-color:transparent;font-weight:700}
-  .cell.slip{background:var(--slip);color:#2a0606;border-color:transparent;font-weight:700}
+.cell.close{background:var(--amber);color:#231209;border-color:transparent;font-weight:700}
+.cell.close:hover{background:#c0984a}
+.dot.c{background:var(--amber);box-shadow:0 0 12px rgba(204,153,68,.5)}
+.val.amber{color:var(--amber)}
+.badge.a{background:rgba(204,153,68,.14);color:var(--amber);border:1px solid rgba(204,153,68,.35)}
+.verdictbox.a{background:rgba(204,153,68,.12);border-color:rgba(204,153,68,.4);color:var(--amber)}
+.verdictbox.a .why{color:var(--amber)}
   .cell.empty:hover{background:rgba(27,62,88,.85);color:var(--cream)}
   .cell.today{outline:2px solid var(--ember);outline-offset:2px}
   .cell.future{opacity:.25;cursor:default}
@@ -122,8 +127,8 @@
   .cell.ro{pointer-events:none}
   .legend{display:flex;gap:18px;align-items:center;margin-top:18px;font-size:12px;color:var(--slate);flex-wrap:wrap}
   .legend .sw{width:13px;height:13px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:-2px}
-  .sw.good{background:var(--good)} .sw.slip{background:var(--slip)}
-  .sw.empty{background:rgba(19,50,71,.6);border:1px solid rgba(255,246,231,.1)}
+  .sw.good{background:var(--good)} .sw.slip{background:var(--slip)} .sw.close{background:var(--amber)}
+  .sw.empty{background:rgba(19,50,71,.6);border:1px solid rgba(255,246,231,.1)} .sw.close{background:var(--amber)}
   .wrow{display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .wrow:last-child{border-bottom:none}
   .wrow .wl{width:120px;font-size:13px;color:var(--cream);font-weight:600;flex-shrink:0}
@@ -277,6 +282,21 @@
   .ecat.oth{background:rgba(157,184,204,.15);color:#9db8cc;border:1px solid rgba(157,184,204,.4)}
   .evcatlabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
 
+  /* Event range styles */
+  .evchip.evrange-start{border-radius:99px 0 0 99px}
+  .evchip.evrange-mid{border-radius:0}
+  .evchip.evrange-end{border-radius:0 99px 99px 0}
+  .evchip.evrange-single{border-radius:99px}
+
+  /* Suggestions panel */
+  .sugg{background:rgba(19,50,71,.5);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:10px}
+  .sugg.evcoll{border-left:4px solid #e0876b}
+  .sugg.evexam{border-left:4px solid #35c48b}
+  .sugg.evboard{border-left:4px solid #b8963e}
+  .sugg.evother{border-left:4px solid #5a7085}
+  .sg-label{font-size:13.5px;font-weight:700;margin-bottom:6px;color:var(--cream)}
+  .sg-do{font-size:13px;color:var(--parch);line-height:1.5}
+
   /* ============ TOAST / MISC ============ */
   #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);background:var(--navy2);
     border:1px solid var(--line2);color:var(--cream);padding:12px 20px;border-radius:14px;font-size:13.5px;font-weight:600;
@@ -303,6 +323,7 @@
 </style>
 </head>
 <body>
+
 <!-- ============ LOCK SCREEN ============ -->
 <div class="lock" id="lockScreen">
   <div class="lbox">
@@ -368,6 +389,7 @@
         <div class="cal-wrap"><div class="cal" id="cal"></div></div>
         <div class="legend">
           <span><span class="sw good"></span>Good day</span>
+          <span><span class="sw close"></span>Close day</span>
           <span><span class="sw slip"></span>Slip day</span>
           <span><span class="sw empty"></span>Not logged</span>
         </div>
@@ -489,6 +511,10 @@
         </div>
       </div>
       <div class="panel">
+        <div class="phead"><h2>Focus now</h2><span class="hint">What the sheet suggests based on upcoming events and your actual logs.</span></div>
+        <div id="suggestions"></div>
+      </div>
+      <div class="panel">
         <div class="phead"><h2>Upcoming</h2><span class="hint">Sorted by date &mdash; the next ones first.</span></div>
         <div class="evlist" id="evList"></div>
       </div>
@@ -500,6 +526,10 @@
         <span class="hint">The system reads the sheet and tells you what needs fixing &mdash; and what to do about it.</span></div>
       <div class="honesty" id="honestyBox"></div>
       <div class="acards" id="acards"></div>
+      <div class="panel">
+        <div class="phead"><h2>Focus now</h2><span class="hint">What the sheet suggests based on upcoming events and your actual logs.</span></div>
+        <div id="suggestions"></div>
+      </div>
     </section>
 
     <!-- PARENT REPORT -->
@@ -685,8 +715,15 @@
         </select>
       </div>
       <div class="field">
-        <label>Date</label>
+        <label>Start date</label>
         <input type="date" id="evDate">
+      </div>
+    </div>
+
+    <div class="frow2">
+      <div class="field">
+        <label>End date (optional)</label>
+        <input type="date" id="evEndDate">
       </div>
     </div>
 
@@ -707,6 +744,7 @@
     </div>
   </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
@@ -938,46 +976,106 @@
       return loadAll().then(renderAll);
     });
   }
-  /* ============ VERDICT ENGINE (the system decides) ============ */
+
+  /* ============ VERDICT ENGINE — SCORED, NOT ALL-OR-NOTHING ============ */
+  // Points: wake 2 (late-but-logged 1), school 2 (holiday/weekend 1), complaints 2,
+  //         study hours 4 (>=5h) / 3 (>=3h) / 2 (>=2h) / 1 (>=1h),
+  //         quality bonus 1, mock bonus 2 (any mock 1 + above own average 1). Max = 12.
+  // Tier: >=75% KEPT (green) | >=50% CLOSE (amber) | below SLIPPED (red)
+  function allMockScores(){
+    var out=[];
+    for (var k in state.entries){
+      var e=state.entries[k];
+      if (e && e.mocks) for (var i=0;i<e.mocks.length;i++){
+        var s=parseFloat(e.mocks[i].score);
+        if (!isNaN(s)) out.push(s);
+      }
+    }
+    return out;
+  }
+  function scoreAboveAvg(score){
+    var s=parseFloat(score); if (isNaN(s)) return false;
+    var all=allMockScores(); if (all.length<2) return false;
+    var sum=0; for (var i=0;i<all.length;i++) sum+=all[i];
+    return s > sum/all.length;
+  }
   function criteriaFor(dateStr){
     var d = parseIso(dateStr);
     var e = getE(dateStr) || {};
     var weekend = isWeekend(d);
     var c = [];
-    var wakeOk = !!(e.wake && e.wake >= WAKE_MIN && e.wake <= WAKE_MAX);
-    c.push({ key:"wake", label:"Wake on time", ok: wakeOk, detail: e.wake ? "woke at "+e.wake : "wake time not logged" });
-    if (weekend) {
-      c.push({ key:"school", label:"School (weekend)", ok:true, detail:"weekend \u2014 not required", na:true });
-    } else if (e.school === "holiday") {
-      c.push({ key:"school", label:"School (holiday)", ok:true, detail:"holiday \u2014 school closed, not counted", na:true });
-    } else {
-      c.push({ key:"school", label:"Went to school", ok: e.school===true, detail: e.school===true ? "attended" : (e.school===false ? "did not go" : "not logged") });
+
+    // 1. wake — on time 2, late-but-logged 1, missing 0
+    var wake = e.wake || "";
+    var wakePts = 0, wakeOk = false;
+    if (wake >= WAKE_MIN && wake <= WAKE_MAX){ wakePts=2; wakeOk=true; }
+    else if (wake && wake <= "10:00"){ wakePts=1; }
+    c.push({ key:"wake", label:"Wake on time", ok:wakeOk, pts:wakePts, max:2,
+      detail: wake ? ("woke at "+wake+(wakePts===1?" \u2014 late but logged":"") ) : "wake time not logged" });
+
+    // 2. school — went 2, holiday/weekend 1, no 0
+    var schoolPts=0, schoolOk=false, schoolNa=false;
+    var schoolLabel="Went to school", schoolDetail="";
+    if (weekend){ schoolPts=1; schoolNa=true; schoolLabel="School (weekend)"; schoolDetail="weekend \u2014 not required"; }
+    else if (e.school==="holiday"){ schoolPts=1; schoolNa=true; schoolLabel="School (holiday)"; schoolDetail="holiday \u2014 not counted"; }
+    else if (e.school===true){ schoolPts=2; schoolOk=true; schoolDetail="attended"; }
+    else { schoolPts=0; schoolDetail = e.school===false ? "did not go \u2014 but effort elsewhere can still keep the day" : "not logged"; }
+    c.push({ key:"school", label:schoolLabel, ok:schoolOk, pts:schoolPts, max:2, na:schoolNa, detail:schoolDetail });
+
+    // 3. complaints — none 2, any 0
+    var compPts=0, compOk=false;
+    if (e.complaints===false){ compPts=2; compOk=true; }
+    c.push({ key:"comp", label:"No complaints", ok:compOk, pts:compPts, max:2,
+      detail: e.complaints===true ? "a teacher complained" : (e.complaints===false ? "no complaints" : "not logged") });
+
+    // 4. study hours — >=5:4, >=3:3, >=2:2, >=1:1, else 0
+    var h = (e.hours!=null) ? e.hours : 0;
+    var hrsPts = h>=5 ? 4 : (h>=3 ? 3 : (h>=2 ? 2 : (h>=1 ? 1 : 0)));
+    var hrsOk = h>=3;
+    c.push({ key:"hours", label:"Study hours", ok:hrsOk, pts:hrsPts, max:4,
+      detail: e.hours!=null ? (e.hours+"h logged \u2014 "+(h>=5?"big day":(h>=3?"on target":(h>=1?"some effort":"none")))) : "hours not logged" });
+
+    // 5. quality bonus — quality 3-4 with hours > 0
+    if (h>0 && e.quality>=3){
+      c.push({ key:"qual", label:"Quality study", ok:true, pts:1, max:1, detail:"logged quality: "+qualName(e.quality) });
+    } else if (h>0 && e.quality){
+      c.push({ key:"qual", label:"Quality study", ok:false, pts:0, max:1, detail:"quality logged as rough \u2014 focus next time" });
     }
-    c.push({ key:"comp", label:"No complaints", ok: e.complaints===false, detail: e.complaints===true ? "a teacher complained" : (e.complaints===false ? "no complaints" : "not logged") });
-    c.push({ key:"hours", label:"Study "+STUDY_TARGET+"h+", ok: !!(e.hours!=null && e.hours>=STUDY_TARGET), detail: e.hours!=null ? (e.hours+"h logged") : "hours not logged" });
-    var missed = c.filter(function(x){ return !x.ok; });
-    return { criteria: c, green: missed.length===0, missed: missed };
+
+    // 6. mock bonus — any mock 1, above own average +1
+    var mocks = (e.mocks||[]).filter(function(m){ return m.name||m.score; });
+    if (mocks.length){
+      var mp=1;
+      if (scoreAboveAvg(mocks[0].score)) mp=2;
+      c.push({ key:"mock", label:"Mock work", ok:true, pts:mp, max:2, detail: mocks.length+" mock(s) \u2014 "+(mp===2?"above your own average":"logged") });
+    }
+
+    var score=0, max=0;
+    for (var i=0;i<c.length;i++){ score+=c[i].pts; max+=c[i].max; }
+    var pct = max ? score/max : 0;
+    var tier = pct>=0.75 ? "good" : (pct>=0.5 ? "close" : "slip");
+    return { criteria:c, green:tier==="good", close:tier==="close", slip:tier==="slip",
+      tier:tier, score:score, max:max, pct:Math.round(pct*100) };
   }
   function verdictFor(dateStr){
-    return criteriaFor(dateStr).green ? "good" : "slip";
+    return criteriaFor(dateStr).tier;
   }
 
   /* ============ STATS ============ */
   function computeStats(){
     var today = new Date();
-    var goodCount=0, slipCount=0, mockCount=0;
+    var goodCount=0, closeCount=0, slipCount=0;
     for (var k in state.entries){
-      var e = state.entries[k]; if (!e) continue;
-      if (e.mocks) mockCount += e.mocks.length;
-      if (verdictFor(k)==="good") goodCount++; else slipCount++;
+      var v = verdictFor(k);
+      if (v==="good") goodCount++; else if (v==="close") closeCount++; else slipCount++;
     }
     var streak=0, cur=new Date(today);
     if (!getE(iso(cur))) cur=addDays(cur,-1);
-    while (getE(iso(cur)) && verdictFor(iso(cur))==="good"){ streak++; cur=addDays(cur,-1); }
+    while (getE(iso(cur)) && verdictFor(iso(cur))!=="slip"){ streak++; cur=addDays(cur,-1); }
     var wkStart=startOfWeek(today), wkGood=0, wkLog=0;
     for (var i=0;i<7;i++){ var d=addDays(wkStart,i); if (d>today) break; var dd=iso(d); if (getE(dd)){ wkLog++; if (verdictFor(dd)==="good") wkGood++; } }
     var pct = wkLog ? Math.round(wkGood/wkLog*100) : 0;
-    return { goodCount:goodCount, slipCount:slipCount, streak:streak, wkGood:wkGood, wkLog:wkLog, pct:pct, mockCount:mockCount };
+    return { goodCount:goodCount, closeCount:closeCount, slipCount:slipCount, streak:streak, wkGood:wkGood, wkLog:wkLog, pct:pct };
   }
   function statCard(lbl, sub, val, cls, sub2){
     return '<div class="stat"><div class="lbl">'+lbl+'</div><div class="val '+cls+'">'+val+'</div><div class="sub">'+sub+' \u2014 '+sub2+'</div></div>';
@@ -985,10 +1083,10 @@
   function renderStatsInto(id){
     var s=computeStats();
     $(id).innerHTML =
-      statCard("Current streak","good days in a row", s.streak, s.streak>0?"green":"", s.streak>0?("running since "+shortDate(addDays(new Date(),-s.streak+1))):"starts tonight")+
-      statCard("Good days","system judged kept", s.goodCount, "green", "green on the sheet")+
-      statCard("Slip days","logged honestly", s.slipCount, s.slipCount>0?"red":"", "before anyone asks")+
-      statCard("This week","Mon \u2013 today", s.wkLog? (s.wkGood+"/"+s.wkLog+" good") : "0 / 0", s.pct>=70?"green":(s.pct>=40?"ember":"red"), s.wkLog? (s.pct+"% kept") : "no entries yet");
+      statCard("Current streak","days without a slip", s.streak, s.streak>0?"green":"", s.streak>0?("running since "+shortDate(addDays(new Date(),-s.streak+1))):"starts tonight")+
+      statCard("Kept days","green on the sheet", s.goodCount, "green", "the system judged them kept")+
+      statCard("Close days","almost kept", s.closeCount, s.closeCount>0?"amber":"", s.closeCount>0?"fix the gap that made them close":"nothing close \u2014 clean")+
+      statCard("Slip days","logged honestly", s.slipCount, s.slipCount>0?"red":"", "before anyone asks");
   }
 
   /* ============ HONESTY METRIC ============ */
@@ -1033,12 +1131,12 @@
         var s = iso(day);
         var cls = "cell";
         if (day > today) cls += " future";
-        else if (getE(s)) cls += (verdictFor(s)==="good" ? " good" : " slip");
+        else if (getE(s)) cls += (" "+verdictFor(s));
         else cls += " empty";
         if (sameDay(day,today)) cls += " today";
         if (readOnly) cls += " ro";
         var e=getE(s), tip=pretty(s);
-        if (e){ var v=criteriaFor(s); tip += " \u2014 "+ (v.green?"kept it":"slipped") + (e.hours!=null?" \u00b7 "+e.hours+"h":"") + (e.wake?" \u00b7 woke "+e.wake:""); }
+        if (e){ var v=criteriaFor(s); tip += " \u2014 "+({good:"kept it",close:"close \u2014 "+v.score+"/"+v.max,slip:"slipped \u2014 "+v.score+"/"+v.max}[v.tier]) + (e.hours!=null?" \u00b7 "+e.hours+"h":"") + (e.wake?" \u00b7 woke "+e.wake:""); }
         html += '<div class="'+cls+'" data-date="'+s+'" title="'+tip+'">'+day.getDate()+'</div>';
       }
     }
@@ -1059,31 +1157,33 @@
       var wkStart = addDays(start, w*7);
       var wkEnd = addDays(wkStart,6);
       var label = (wkStart.getDate()+" "+MONTHS[wkStart.getMonth()]).toUpperCase();
-      var dots="", good=0, slip=0, log=0;
+      var dots="", good=0, close=0, slip=0, log=0;
       for (var d=0; d<7; d++){
         var day=addDays(wkStart,d); var s=iso(day); var e=getE(s);
         var cls="u", t="not logged";
-        if (e){ log++; var v=verdictFor(s); if (v==="good"){ cls="g"; good++; t="kept it"; } else { cls="s"; slip++; t="slipped"; } }
+        if (e){ log++; var v=verdictFor(s); if (v==="good"){ cls="g"; good++; t="kept it"; } else if (v==="close"){ cls="c"; close++; t="close \u2014 almost"; } else { cls="s"; slip++; t="slipped"; } }
         dots += '<span class="'+cls+'" title="'+pretty(s)+' \u2014 '+t+'"></span>';
       }
       var vd, vcls;
       if (wkEnd > today){ vd = log ? ("IN PROGRESS \u00b7 "+good+"/"+log+" good") : "IN PROGRESS"; vcls="blank"; }
       else if (!log){ vd="NO ENTRIES"; vcls="blank"; }
-      else if (slip===0){ vd="CLEAN WEEK"; vcls="on"; }
+      else if (slip===0 && close===0){ vd="CLEAN WEEK"; vcls="on"; }
+      else if (slip===0 && close>0){ vd="CLOSE WEEK \u00b7 "+close+" near-miss"+(close>1?"es":""); vcls="warn"; }
       else if (slip===1){ vd="ONE SLIP"; vcls="warn"; }
       else { vd="SLIPPED \u00b7 "+slip+" days"; vcls="bad"; }
       html += '<div class="wrow"><div class="wl">'+label+'</div><div class="dots">'+dots+'</div><div class="vd '+vcls+'">'+vd+'</div></div>';
     }
     el.innerHTML = html;
   }
+
   /* ============ ENTRIES LIST ============ */
   function critHtml(c){
     var s = '<div class="crit">';
     for (var i=0;i<c.length;i++){
       var x=c[i];
       if (x.na){ s += '<span class="na">'+x.label+': '+x.detail+'</span>'; }
-      else if (x.ok){ s += '<span class="ok">\u2713 '+x.label+'</span>'; }
-      else { s += '<span class="no">\u2717 '+x.label+' ('+x.detail+')</span>'; }
+      else if (x.ok){ s += '<span class="ok">✓ '+x.label+' '+x.pts+'/'+x.max+'</span>'; }
+      else { s += '<span class="no">✗ '+x.label+' ('+x.detail+')</span>'; }
     }
     return s + '</div>';
   }
@@ -1104,8 +1204,8 @@
     var html="";
     for (var i=0;i<keys.length;i++){
       var s=keys[i]; var e=state.entries[s]; var v=verdictFor(s);
-      var dotCls = v==="good"?"g":"s";
-      var badge = v==="good"?'<span class="badge g">KEPT IT</span>':'<span class="badge s">SLIPPED</span>';
+      var dotCls = v==="good"?"g":(v==="close"?"c":"s");
+      var badge = v==="good"?'<span class="badge g">KEPT IT</span>':(v==="close"?'<span class="badge a">CLOSE</span>':'<span class="badge s">SLIPPED</span>');
       var crit = critHtml(criteriaFor(s).criteria);
       var meta = [];
       if (e.hours!=null) meta.push("Study: "+e.hours+"h");
@@ -1189,11 +1289,15 @@
     state.entries[currentDate]=e0; // restore — nothing saved yet
     if (v.green){
       box.className="verdictbox g";
-      box.innerHTML = "VERDICT: GREEN \u2014 this day counts as kept."+'<div class="why">All criteria met: on time, school, no complaints, study done.</div>';
+      box.innerHTML = "VERDICT: GREEN — "+v.score+"/"+v.max+" ("+Math.round(v.pct)+"%) · this day counts as kept."+"<div class=\"why\">All criteria met: on time, school, no complaints, study done.</div>";
+    } else if (v.close){
+      box.className="verdictbox a";
+      var missing = v.criteria.filter(function(x){ return !x.ok; }).map(function(x){ return x.label+" ("+x.detail+")"; }).join(" · ");
+      box.innerHTML = "VERDICT: CLOSE — "+v.score+"/"+v.max+" ("+Math.round(v.pct)+"%) · almost kept. Fix: "+missing;
     } else {
       box.className="verdictbox s";
-      var why = v.missed.map(function(m){ return m.label+(m.detail?" \u2014 "+m.detail:""); }).join(" \u00b7 ");
-      box.innerHTML = "VERDICT: RED \u2014 this day counts as a slip."+'<div class="why">'+why+'</div>';
+      var missing2 = v.criteria.filter(function(x){ return !x.ok; }).map(function(x){ return x.label+" ("+x.detail+")"; }).join(" · ");
+      box.innerHTML = "VERDICT: RED — "+v.score+"/"+v.max+" ("+Math.round(v.pct)+"%) · slipped. Fix: "+missing2;
     }
   }
   function draftEntry(){
@@ -1237,6 +1341,7 @@
   document.addEventListener("keydown", function(ev){ if (ev.key==="Escape"){ closeModal(); closeTaskModal(); } });
   function closeModal(){ $("modal").classList.remove("open"); }
   $("logToday").addEventListener("click", function(){ openModal(todayIso()); });
+
   /* ============ TASK HELPERS ============ */
   function taskIsDone(t){ return t.status==="done"; }
   function taskIsOpen(t){ return t.status==="pending"||t.status==="progress"; }
@@ -1377,6 +1482,7 @@
   $("vFilter").addEventListener("change", renderVantalyne);
   $("vPriority").addEventListener("change", renderVantalyne);
   $("addVantalyne").addEventListener("click", function(){ openTaskModal("vantalyne", null); });
+
   /* ============ TASK MODAL ============ */
   var editingTask=null; // { kind:'school'|'vantalyne', id:null|uuid }
   var SCHOOL_SUBJECTS=["Political Science","Economics","Maths","English","Psychology","CLAT Prep","SAT Prep"];
@@ -1431,6 +1537,7 @@
   });
   $("tmCancel").addEventListener("click", closeTaskModal);
   $("taskModal").addEventListener("click", function(ev){ if (ev.target===this) closeTaskModal(); });
+
   /* ============ WHERE I'M AT — ANALYSIS ENGINE ============ */
   function daysSince(dateStr){
     var d=parseIso(dateStr);
@@ -1533,6 +1640,110 @@
   function renderWhere(){
     renderHonestyInto("honestyBox");
     renderAcardsInto("acards");
+    renderSuggestions("suggestions");
+  }
+
+  /* ============ FOCUS NOW — SUGGESTION PANEL ============ */
+  function upcomingEvents(horizon){
+    var today = todayIso();
+    return (state.events||[])
+      .filter(function(ev){
+        var start = ev.date || ev.start_date;
+        return start >= today;
+      })
+      .sort(function(a,b){
+        var sa = a.date || a.start_date;
+        var sb = b.date || b.start_date;
+        return sa < sb ? -1 : (sa > sb ? 1 : 0);
+      })
+      .slice(0, horizon);
+  }
+  function avgHoursLast(days){
+    var sum=0, cnt=0;
+    for (var i=0;i<days;i++){
+      var e=getE(iso(addDays(new Date(),-i)));
+      if (e && e.hours!=null){ sum+=e.hours; cnt++; }
+    }
+    return cnt ? Math.round(sum/cnt*10)/10 : 0;
+  }
+  function wakeMissesLast(days){
+    var c=0;
+    for (var i=0;i<days;i++){
+      var e=getE(iso(addDays(new Date(),-i)));
+      if (e && !(e.wake && e.wake>=WAKE_MIN && e.wake<=WAKE_MAX)) c++;
+    }
+    return c;
+  }
+  function mockDaysLast(days){
+    var c=0;
+    for (var i=0;i<days;i++){
+      var e=getE(iso(addDays(new Date(),-i)));
+      if (e && e.mocks && e.mocks.length) c++;
+    }
+    return c;
+  }
+  function honestyPct(){
+    var h=honestyMetric(); return h.pct;
+  }
+  function renderSuggestions(id){
+    var el=$(id); if (!el) return;
+    var today = todayIso();
+    var ups = upcomingEvents(6);
+    var avgH = avgHoursLast(14);
+    var wakeM = wakeMissesLast(7);
+    var mockCnt = mockDaysLast(14);
+    var hon = honestyPct();
+
+    var items = [];
+    // Event-driven suggestions
+    for (var i=0;i<ups.length;i++){
+      var ev = ups[i];
+      var start = ev.date || ev.start_date;
+      var end = ev.end_date || start;
+      var diff = Math.round((parseIso(start) - new Date())/86400000);
+      var label = ev.title + (diff===0?" today":(diff===1?" tomorrow":" in "+diff+" days"));
+      var cat = EV_CATS[ev.category]||EV_CATS.other;
+      var cls = cat.cls;
+      var suggestion = "";
+      if (diff <= 2){
+        suggestion = "Final push: light review only, sleep 8h, pack everything tonight.";
+      } else if (diff <= 7){
+        suggestion = (ev.category==="exam"||ev.category==="board")
+          ? "Do 1 full timed mock + review wrongs. 2h/day minimum."
+          : "Finalize essays/materials. One polished draft per day.";
+      } else if (diff <= 30){
+        suggestion = "Weekly plan: 1 mock + 2 section drills. Target "+STUDY_TARGET+"h/day. Mock review same evening.";
+      } else {
+        suggestion = "Build foundation: "+STUDY_TARGET+"h/day consistent. One mock every 7\u201310 days. Log everything.";
+      }
+      items.push({cls:cls, label:label, suggestion:suggestion, diff:diff});
+    }
+
+    // Habit nudges
+    if (avgH < STUDY_TARGET && avgH > 0){
+      items.push({cls:"evother", label:"Study volume", suggestion:"14-day avg is "+avgH+"h \u2014 add 1h/day to hit "+STUDY_TARGET+"h. Protect 8\u201311pm block.", diff:999});
+    } else if (avgH === 0){
+      items.push({cls:"evother", label:"Study volume", suggestion:"No study logged in 2 weeks. Start with 1h tonight \u2014 hardest subject first.", diff:999});
+    }
+    if (wakeM >= 3){
+      items.push({cls:"evother", label:"Wake consistency", suggestion:wakeM+"/7 mornings off-window. Alarm at 7:00, phone across room, no snooze.", diff:999});
+    }
+    if (mockCnt === 0 && diff <= 60){
+      items.push({cls:"evother", label:"Mock cadence", suggestion:"Zero mocks in 2 weeks. First mock this Monday \u2014 any subject. Baseline needed.", diff:999});
+    }
+    if (hon < 80){
+      items.push({cls:"evother", label:"Honesty score", suggestion:hon+"% days logged. The sheet only works when it's full. Log tonight.", diff:999});
+    }
+
+    // Sort: events first (by diff), then nudges
+    items.sort(function(a,b){ return a.diff - b.diff; });
+
+    var html = "";
+    for (var j=0;j<items.length;j++){
+      var it = items[j];
+      html += '<div class="sugg '+it.cls+'"><div class="sg-label">'+it.label+'</div><div class="sg-do">'+it.suggestion+'</div></div>';
+    }
+    el.innerHTML = html || '<div class="empty" style="padding:16px">All caught up \u2014 no pressing deadlines. Keep the daily rhythm.</div>';
   }
 
   /* ============ PARENT REPORT ============ */
@@ -1544,6 +1755,7 @@
     renderAcardsInto("reportAcards");
     renderChartsR();
   }
+
   /* ============ EVENT CALENDAR ============ */
   var EV_CATS = {
     college: { cls:"evcoll",  cat:"coll",  label:"College App",      color:"#e0876b" },
@@ -1554,7 +1766,12 @@
   var calMonth = new Date().getMonth(), calYear = new Date().getFullYear();
 
   function eventsOn(dateStr){
-    return state.events.filter(function(ev){ return ev.date===dateStr; });
+    return state.events.filter(function(ev){
+      if (!ev) return false;
+      var start = ev.date || ev.start_date;
+      var end = ev.end_date || start;
+      return dateStr >= start && dateStr <= end;
+    });
   }
   function evRowHtml(ev, ro){
     var c = EV_CATS[ev.category]||EV_CATS.other;
@@ -1609,7 +1826,14 @@
       var chips="";
       for (var i=0;i<evs.length;i++){
         var c = EV_CATS[evs[i].category]||EV_CATS.other;
-        chips += '<div class="evchip '+c.cls+'" title="'+esc(evs[i].title)+'">'+esc(evs[i].title)+'</div>';
+        var cls = c.cls;
+        // range indicator: if event spans multiple days
+        var start = evs[i].date || evs[i].start_date;
+        var end = evs[i].end_date || start;
+        if (start < ds && end > ds) cls += " evrange-mid";
+        else if (start === ds && end > ds) cls += " evrange-start";
+        else if (start < ds && end === ds) cls += " evrange-end";
+        chips += '<div class="evchip '+cls+'" title="'+esc(evs[i].title)+'">'+esc(evs[i].title)+'</div>';
       }
       if (more>0) chips += '<div class="evchip more">+'+more+' more</div>';
       html += '<div class="mcell'+(ds===today?' today':'')+'" data-d="'+ds+'">'+
@@ -1642,7 +1866,8 @@
     $("evSub").textContent = ev ? "Update the details \u2014 it changes for both of you." : (dateStr ? "On "+pretty(dateStr) : "");
     $("evTitleI").value = ev ? ev.title : "";
     $("evCat").value = ev ? ev.category : "college";
-    $("evDate").value = ev ? ev.date : (dateStr || todayIso());
+    $("evDate").value = ev ? (ev.date || ev.start_date) : (dateStr || todayIso());
+    $("evEndDate").value = ev ? (ev.end_date || "") : "";
     $("evTime").value = (ev && ev.time) ? ev.time : "";
     $("evNotes").value = (ev && ev.notes) ? ev.notes : "";
     $("evDelete").style.display = ev ? "inline-block" : "none";
@@ -1655,10 +1880,13 @@
     var date=$("evDate").value;
     if (!title){ toast("Give the event a name."); return; }
     if (!date){ toast("Pick a date."); return; }
+    var endDate=$("evEndDate").value || null;
+    if (endDate && endDate < date){ toast("End date cannot be before start date."); return; }
     var ev = {
       title: title,
       category: $("evCat").value,
       date: date,
+      end_date: endDate,
       time: $("evTime").value || null,
       notes: $("evNotes").value.trim() || null
     };
@@ -1676,6 +1904,7 @@
   $("evCancel").addEventListener("click", closeEvModal);
   $("evModal").addEventListener("click", function(ev2){ if (ev2.target===this) closeEvModal(); });
   document.addEventListener("keydown", function(ev){ if (ev.key==="Escape") closeEvModal(); });
+
   /* ============ CHARTS (generic) ============ */
   function setupCanvas(cv){
     var dpr = window.devicePixelRatio||1;
@@ -1842,3 +2071,4 @@
 </script>
 </body>
 </html>
+

@@ -914,8 +914,9 @@
 
   /* ============ STORE ============ */
   function loadAll(){
+    // NB: supabase-js query chains have .then but NOT .catch — use the 2-arg form.
     var pEvents = supabase.from("events").select("*").order("date", { ascending:true })
-      .catch(function(){ return { data: [] }; }); // calendar table not created yet -> empty, not broken
+      .then(function(res){ return res; }, function(){ return { data: [] }; }); // calendar table not created yet -> empty, not broken
     return Promise.all([
       supabase.from("entries").select("*"),
       supabase.from("tasks").select("*").order("created_at", { ascending:true }),

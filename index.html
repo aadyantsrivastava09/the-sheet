@@ -404,7 +404,7 @@
           <span class="hint">Mock scores over time and study hours per day.</span></div>
         <div class="charts">
           <div class="chart-box">
-            <h3>Mock scores</h3>
+            <h3>Mock scores <span class="hint" style="display:inline">(shown as % of each test's total)</span></h3>
             <div id="mockChartWrap"><canvas id="mockChart"></canvas></div>
             <div class="ch-legend">
               <span><b style="background:#e0876b"></b>SAT</span>
@@ -982,22 +982,29 @@
   //         study hours 4 (>=5h) / 3 (>=3h) / 2 (>=2h) / 1 (>=1h),
   //         quality bonus 1, mock bonus 2 (any mock 1 + above own average 1). Max = 12.
   // Tier: >=75% KEPT (green) | >=50% CLOSE (amber) | below SLIPPED (red)
-  function allMockScores(){
+  // Normalized comparison: if the mock has a total (SAT /1600, CLAT /120) compare as %,
+  // otherwise compare raw score against raw mocks (legacy data).
+  function allMockEffs(totalMode){
     var out=[];
     for (var k in state.entries){
       var e=state.entries[k];
       if (e && e.mocks) for (var i=0;i<e.mocks.length;i++){
-        var s=parseFloat(e.mocks[i].score);
-        if (!isNaN(s)) out.push(s);
+        var m=e.mocks[i];
+        var hasTotal = parseFloat(m.total)>0;
+        if (totalMode && !hasTotal) continue;
+        var v = totalMode ? mockPct(m) : parseFloat(m.score);
+        if (!isNaN(v)) out.push(v);
       }
     }
     return out;
   }
-  function scoreAboveAvg(score){
+  function scoreAboveAvg(score, total){
     var s=parseFloat(score); if (isNaN(s)) return false;
-    var all=allMockScores(); if (all.length<2) return false;
+    var totalMode = parseFloat(total)>0;
+    var all=allMockEffs(totalMode); if (all.length<2) return false;
     var sum=0; for (var i=0;i<all.length;i++) sum+=all[i];
-    return s > sum/all.length;
+    var v = totalMode ? mockPct({score:s,total:total}) : s;
+    return v > sum/all.length;
   }
   function criteriaFor(dateStr){
     var d = parseIso(dateStr);
@@ -1046,7 +1053,7 @@
     var mocks = (e.mocks||[]).filter(function(m){ return m.name||m.score; });
     if (mocks.length){
       var mp=1;
-      if (scoreAboveAvg(mocks[0].score)) mp=2;
+      if (scoreAboveAvg(mocks[0].score, mocks[0].total)) mp=2;
       c.push({ key:"mock", label:"Mock work", ok:true, pts:mp, max:2, detail: mocks.length+" mock(s) \u2014 "+(mp===2?"above your own average":"logged") });
     }
 
@@ -1190,10 +1197,17 @@
   function mockHtml(mocks){
     if (!mocks || !mocks.length) return "";
     var s = '<div class="meta">';
-    for (var i=0;i<mocks.length;i++) s += 'Mock: <b style="color:var(--cream)">'+esc(mocks[i].name)+'</b> \u2014 '+esc(mocks[i].score)+' &nbsp;\u00b7&nbsp; ';
+    for (var i=0;i<mocks.length;i++){
+      var pct = mockPctStr(mocks[i]);
+      s += 'Mock: <b style="color:var(--cream)">'+esc(mocks[i].name)+'</b> \u2014 '+esc(mocks[i].score)+(mocks[i].total?'/'+esc(mocks[i].total):'')+(pct?' \u00b7 '+pct:'')+' &nbsp;\u00b7&nbsp; ';
+    }
     return s + '</div>';
   }
   function qualName(q){ return ["","Rough","Okay","Good","Great"][q]||""; }
+  // Mock normalization — bring different exams to the same scale (SAT 1210/1600, CLAT 80/120 -> %)
+  function mockPct(m){ var t=parseFloat(m.total), s=parseFloat(m.score); if (isNaN(s)) return null; if (t>0) return s/t*100; return null; }
+  function mockPctStr(m){ var p=mockPct(m); return p!=null ? Math.round(p*10)/10+"%" : ""; }
+  function mockEff(m){ var p=mockPct(m); return p!=null ? p : parseFloat(m.score); }
   function renderEntries(){
     var el=$("entries"); if (!el) return;
     var keys = Object.keys(state.entries).sort().reverse();
@@ -1238,7 +1252,7 @@
     schoolSel = (e.school==null)?null:e.school;
     compSel = (e.complaints==null)?null:e.complaints;
     qualSel = (e.quality==null)?null:e.quality;
-    mocks = e.mocks ? e.mocks.map(function(m){return {name:m.name,score:m.score};}) : [];
+    mocks = e.mocks ? e.mocks.map(function(m){return {name:m.name,score:m.score,total:m.total};}) : [];
     $("mTitle").textContent = sameDay(parseIso(s),new Date()) ? "Log today" : "Log the day";
     $("mDate").textContent = pretty(s);
     $("fWake").value = e.wake||"";
@@ -1248,10 +1262,10 @@
     var weekend = isWeekend(parseIso(s));
     $("schoolField").style.display = weekend ? "none" : "block";
     if (weekend) schoolSel = null;
-    renderSchool(); renderComp(); renderQual(); renderMocks(); updateVerdict();
+    renderSchoolSel(); renderComp(); renderQual(); renderMocks(); updateVerdict();
     $("modal").classList.add("open");
   }
-  function renderSchool(){
+  function renderSchoolSel(){
     $("schYes").style.outline = schoolSel===true ? "2px solid var(--cream)" : "none";
     $("schNo").style.outline = schoolSel===false ? "2px solid var(--cream)" : "none";
     $("schHoliday").style.outline = schoolSel==="holiday" ? "2px solid var(--cream)" : "none";
@@ -1273,12 +1287,14 @@
       html += '<div class="mockrow">'+
         '<input type="text" placeholder="Test (CLAT / SAT / Monday)" value="'+esc(mocks[i].name)+'" data-mi="'+i+'">'+
         '<input type="number" placeholder="Score" value="'+esc(mocks[i].score)+'" data-ms="'+i+'">'+
+        '<input type="number" placeholder="Out of" value="'+(mocks[i].total!=null?esc(mocks[i].total):"")+'" data-mt="'+i+'">'+
         '<button data-mr="'+i+'" class="danger">\u00d7</button></div>';
     }
-    $("mockList").innerHTML=html || '<div class="empty" style="padding:10px">No mocks today</div>';
-    var ns=document.querySelectorAll("[data-mi]"), ss=document.querySelectorAll("[data-ms]"), rs=document.querySelectorAll("[data-mr]");
+    $("mockList").innerHTML=html || '<div class="empty" style="padding:10px">No mocks today \u2014 add one. Include the total: SAT 1210/1600, CLAT 80/120.</div>';
+    var ns=document.querySelectorAll("[data-mi]"), ss=document.querySelectorAll("[data-ms]"), ts=document.querySelectorAll("[data-mt]"), rs=document.querySelectorAll("[data-mr]");
     for (var a=0;a<ns.length;a++) ns[a].addEventListener("input", function(){ mocks[+this.getAttribute("data-mi")].name=this.value; });
     for (var b=0;b<ss.length;b++) ss[b].addEventListener("input", function(){ mocks[+this.getAttribute("data-ms")].score=this.value; });
+    for (var d=0;d<ts.length;d++) ts[d].addEventListener("input", function(){ mocks[+this.getAttribute("data-mt")].total=this.value; });
     for (var c=0;c<rs.length;c++) rs[c].addEventListener("click", function(){ mocks.splice(+this.getAttribute("data-mr"),1); renderMocks(); });
   }
   function updateVerdict(){
@@ -1316,9 +1332,9 @@
       updated_at: new Date().toISOString()
     };
   }
-  $("schYes").addEventListener("click", function(){ schoolSel=true; renderSchool(); updateVerdict(); });
-  $("schNo").addEventListener("click", function(){ schoolSel=false; renderSchool(); updateVerdict(); });
-  $("schHoliday").addEventListener("click", function(){ schoolSel="holiday"; renderSchool(); updateVerdict(); });
+  $("schYes").addEventListener("click", function(){ schoolSel=true; renderSchoolSel(); updateVerdict(); });
+  $("schNo").addEventListener("click", function(){ schoolSel=false; renderSchoolSel(); updateVerdict(); });
+  $("schHoliday").addEventListener("click", function(){ schoolSel="holiday"; renderSchoolSel(); updateVerdict(); });
   $("compYes").addEventListener("click", function(){ compSel=true; renderComp(); updateVerdict(); });
   $("compNo").addEventListener("click", function(){ compSel=false; renderComp(); updateVerdict(); });
   $("addMock").addEventListener("click", function(){ mocks.push({name:"",score:""}); renderMocks(); });
@@ -1593,15 +1609,17 @@
       var gap=daysSince(lastMock);
       var mClass = gap<=3?"g":(gap<=7?"a":"r");
       var scores = mockDays.map(function(d){
-        return state.entries[d].mocks.map(function(m){ return {d:d, name:m.name, score:parseFloat(m.score)}; });
+        return state.entries[d].mocks.map(function(m){ return {d:d, name:m.name, score:parseFloat(m.score), total:parseFloat(m.total), pct:mockPct(m)}; });
       }).reduce(function(a,b){ return a.concat(b); },[]);
       scores = scores.filter(function(m){ return !isNaN(m.score); }).sort(function(a,b){ return a.d<b.d?-1:1; });
       var trend="";
       if (scores.length>=2){
-        var lastS=scores[scores.length-1].score, prevS=scores[scores.length-2].score;
-        trend = lastS>prevS ? " \u2014 trending up." : (lastS<prevS ? " \u2014 dipped since last time." : " \u2014 flat since last time.");
+        var lastV = mockEff(scores[scores.length-1]), prevV = mockEff(scores[scores.length-2]);
+        trend = lastV>prevV ? " \u2014 trending up." : (lastV<prevV ? " \u2014 dipped since last time." : " \u2014 flat since last time.");
       } else { trend=" \u2014 one point so far."; }
-      cards.push(card(mClass,"Mocks","Last mock "+gap+" day(s) ago"+trend,"Latest: "+esc(scores[scores.length-1].name)+" \u2014 "+scores[scores.length-1].score+" on "+shortDate(parseIso(scores[scores.length-1].d))+"." , gap<=3?"Keep the cadence \u2014 one every few days.":"Monday test this week. Review the wrong ones the same evening."));
+      var lm=scores[scores.length-1];
+      var latestTxt = esc(lm.name)+" \u2014 "+lm.score+(lm.total>0?"/"+lm.total:"")+(lm.pct!=null?" \u2014 "+Math.round(lm.pct*10)/10+"%":"");
+      cards.push(card(mClass,"Mocks","Last mock "+gap+" day(s) ago"+trend,"Latest: "+latestTxt+" on "+shortDate(parseIso(lm.d))+".", gap<=3?"Keep the cadence \u2014 one every few days.":"Monday test this week. Review the wrong ones the same evening."));
     }
 
     // 6. school tasks
@@ -1923,35 +1941,41 @@
   }
   function collectMockPoints(){
     var pts=[];
+    var hasAnyTotal=false;
     var keys=Object.keys(state.entries).sort();
     for (var i=0;i<keys.length;i++){
       var e=state.entries[keys[i]];
       if (e && e.mocks && e.mocks.length){
         for (var j=0;j<e.mocks.length;j++){
           var m=e.mocks[j];
-          if (m.name||m.score) pts.push({ d:parseIso(keys[i]), ds:keys[i], name:m.name||"Mock", score:parseFloat(m.score) });
+          if (parseFloat(m.total)>0) hasAnyTotal=true;
+          if (m.name||m.score) pts.push({ d:parseIso(keys[i]), ds:keys[i], name:m.name||"Mock", score:parseFloat(m.score), total:parseFloat(m.total), pct:mockPct(m), eff:mockEff(m) });
         }
       }
     }
+    // Once normalized (% of total) data exists, only plot comparable points — raw legacy scores would dwarf %s.
+    if (hasAnyTotal) pts = pts.filter(function(p){ return p.pct!=null; });
     pts.sort(function(a,b){ return a.d-b.d; });
     return pts;
   }
   function renderMockChartInto(cvId, wrapId){
     var box=$(wrapId); if (!box) return;
     var pts=collectMockPoints();
+    var pctMode = pts.length>=1 && pts.every(function(p){ return p.pct!=null; });
     if (pts.length<2){
       box.innerHTML = '<div class="empty" style="padding:70px 20px">'+(pts.length===1
-        ? 'One mock so far \u2014 "'+esc(pts[0].name)+'" \u2014 '+pts[0].score+' &mdash; add the next one to start the line.'
-        : 'No mocks yet. Scores from CLAT, SAT and Monday tests build this graph.')+'</div>';
+        ? 'One mock so far \u2014 "'+esc(pts[0].name)+'" \u2014 '+(pts[0].pct!=null?Math.round(pts[0].pct*10)/10+"%":pts[0].score)+(pts[0].total>0?"/"+pts[0].total:"")+' &mdash; add the next one to start the line.'
+        : 'No mocks yet. Enter scores with totals (SAT 1210/1600, CLAT 80/120) &mdash; they\u2019re shown as % so different tests compare fairly.')+'</div>';
       return;
     }
     box.innerHTML = '<canvas id="'+cvId+'"></canvas>';
     var cv=$(cvId); var S=setupCanvas(cv); var ctx=S.ctx, w=S.w, h=S.h;
     var padL=38, padR=14, padT=18, padB=26;
     var iw=w-padL-padR, ih=h-padT-padB;
-    var min=Math.min.apply(null, pts.map(function(p){return p.score;}))-10;
-    var max=Math.max.apply(null, pts.map(function(p){return p.score;}))+10;
+    var min=Math.min.apply(null, pts.map(function(p){return p.eff;}))-10;
+    var max=Math.max.apply(null, pts.map(function(p){return p.eff;}))+10;
     min=Math.max(0, Math.floor(min/10)*10); max=Math.ceil(max/10)*10;
+    if (pctMode){ min=0; max=100; }
     if (max<=min) max=min+20;
     var x=function(i){ return pts.length===1?padL+iw/2:padL+(iw*(i/(pts.length-1))); };
     var y=function(v){ return padT+ih-((v-min)/(max-min))*ih; };
@@ -1960,18 +1984,18 @@
     for (var g=0;g<=steps;g++){
       var val=min+(max-min)*g/steps; var yy=y(val);
       ctx.strokeStyle="rgba(157,184,204,.15)"; ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(w-padR,yy); ctx.stroke();
-      ctx.fillStyle="rgba(157,184,204,.8)"; ctx.fillText(Math.round(val)+"", padL-6, yy);
+      ctx.fillStyle="rgba(157,184,204,.8)"; ctx.fillText(Math.round(val)+(pctMode?"%":""), padL-6, yy);
     }
     ctx.strokeStyle="rgba(157,184,204,.9)"; ctx.lineWidth=1.5; ctx.beginPath();
-    for (var i2=0;i2<pts.length;i2++){ var px=x(i2), py=y(pts[i2].score); if (i2===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+    for (var i2=0;i2<pts.length;i2++){ var px=x(i2), py=y(pts[i2].eff); if (i2===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
     ctx.stroke();
     for (var i3=0;i3<pts.length;i3++){
-      var px2=x(i3), py2=y(pts[i3].score);
+      var px2=x(i3), py2=y(pts[i3].eff);
       ctx.beginPath(); ctx.arc(px2,py2,4,0,Math.PI*2); ctx.fillStyle=mockColor(pts[i3].name); ctx.fill();
       ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.lineWidth=1; ctx.stroke();
       ctx.font="11px ui-sans-serif, system-ui"; ctx.textAlign="center"; ctx.textBaseline="bottom";
       ctx.fillStyle="rgba(255,246,231,.75)";
-      ctx.fillText(pts[i3].score, px2, py2-7);
+      ctx.fillText(pts[i3].pct!=null ? Math.round(pts[i3].pct*10)/10+"%" : pts[i3].score, px2, py2-7);
     }
     var labelEvery = Math.max(1, Math.ceil(pts.length/6));
     ctx.textBaseline="top";

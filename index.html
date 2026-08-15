@@ -266,7 +266,7 @@
   .evchip{font-size:9.5px;line-height:1.25;padding:2px 5px;border-radius:6px;color:#fff;overflow:hidden;
     white-space:nowrap;text-overflow:ellipsis;font-weight:600}
   .evchip.more{background:rgba(255,246,231,.12);color:var(--slate)}
-  .evcoll{background:#e0876b} .evexam{background:#35c48b} .evboard{background:#b8963e} .evother{background:#5a7085}
+  .evcoll{background:#e0876b} .evexam{background:#35c48b} .evboard{background:#b8963e} .evscho{background:#7aa6e0} .evvant{background:#c98fe0} .evother{background:#5a7085}
   .evlist{margin-top:8px}
   .evrow{display:flex;gap:14px;align-items:flex-start;padding:13px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .evrow:last-child{border-bottom:none}
@@ -279,6 +279,8 @@
   .ecat.coll{background:rgba(224,135,107,.15);color:#e0876b;border:1px solid rgba(224,135,107,.4)}
   .ecat.exam{background:rgba(53,196,139,.15);color:#35c48b;border:1px solid rgba(53,196,139,.4)}
   .ecat.board{background:rgba(212,184,106,.15);color:#d4b86a;border:1px solid rgba(212,184,106,.4)}
+  .ecat.sch{background:rgba(122,166,224,.15);color:#7aa6e0;border:1px solid rgba(122,166,224,.4)}
+  .ecat.van{background:rgba(201,143,224,.15);color:#c98fe0;border:1px solid rgba(201,143,224,.4)}
   .ecat.oth{background:rgba(157,184,204,.15);color:#9db8cc;border:1px solid rgba(157,184,204,.4)}
   .evcatlabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
 
@@ -460,6 +462,10 @@
 
     <!-- VANTALYNE -->
     <section class="view" id="v-vantalyne">
+      <div class="plate" id="vEventsWrap" style="display:none">
+        <h3>Upcoming Vantalyne events</h3>
+        <div id="vEvents"></div>
+      </div>
       <div class="tasktool">
         <select id="vCat">
           <option value="all">All categories</option>
@@ -494,7 +500,7 @@
     <!-- CALENDAR -->
     <section class="view" id="v-calendar">
       <div class="phead"><h2>Calendar</h2>
-        <span class="hint" id="calHint">College applications, competitive exams, boards &mdash; everything on one calendar, visible to both of us.</span></div>
+        <span class="hint" id="calHint">School tests, Vantalyne, competitive exams, boards, college apps &mdash; one calendar, visible to both of us.</span></div>
       <div class="panel">
         <div class="calhead">
           <button id="calPrev">&#8249;</button>
@@ -504,6 +510,8 @@
         </div>
         <div class="mcal" id="mcal"></div>
         <div class="legend" style="margin-top:16px">
+          <span><span class="sw" style="background:#7aa6e0"></span>School test</span>
+          <span><span class="sw" style="background:#c98fe0"></span>Vantalyne</span>
           <span><span class="sw" style="background:#e0876b"></span>College app</span>
           <span><span class="sw" style="background:#35c48b"></span>Competitive exam</span>
           <span><span class="sw" style="background:#b8963e"></span>Board</span>
@@ -701,16 +709,18 @@
 
     <div class="field">
       <label>Event</label>
-      <input type="text" id="evTitleI" placeholder="e.g. SAT exam, UCAS deadline, Boards start, CLAT">
+      <input type="text" id="evTitleI" placeholder="e.g. Psychology test, Vantalyne deck, SAT exam, Boards start">
     </div>
 
     <div class="frow2">
       <div class="field">
         <label>Category</label>
         <select id="evCat">
-          <option value="college">College App</option>
+          <option value="school">School Test</option>
+          <option value="vantalyne">Vantalyne</option>
           <option value="exam">Competitive Exam</option>
           <option value="board">Board</option>
+          <option value="college">College App</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -725,11 +735,15 @@
         <label>End date (optional)</label>
         <input type="date" id="evEndDate">
       </div>
+      <div class="field">
+        <label>Time (optional)</label>
+        <input type="time" id="evTime">
+      </div>
     </div>
 
     <div class="field">
-      <label>Time (optional)</label>
-      <input type="time" id="evTime">
+      <label>Syllabus / what to cover <span class="hint">(add for tests)</span></label>
+      <textarea id="evSyllabus" placeholder="e.g. Psychology Ch 1&ndash;4: memory, learning, thinking &mdash; revise NCERT + practice questions"></textarea>
     </div>
 
     <div class="field">
@@ -1424,6 +1438,21 @@
   }
 
   /* ============ SCHOOL TAB ============ */
+  // One row for a calendar event on the plate: title, category, countdown, and the syllabus as the "what to do".
+  function evPlateRow(ev){
+    var c=EV_CATS[ev.category]||EV_CATS.other;
+    var s='<div class="pli">&#128218; <b>'+esc(ev.title)+'</b> <span style="color:'+c.color+'">'+c.label+'</span> &mdash; '+eventCountdown(ev)+(ev.time?' at '+esc(ev.time):'');
+    if (ev.syllabus) s+=' &nbsp;\u00b7&nbsp; <b>To do:</b> '+esc(ev.syllabus);
+    else if (role!=="parent") s+=' &nbsp;\u00b7&nbsp; <i>no syllabus yet &mdash; edit to add</i>';
+    if (role!=="parent") s+=' <button data-pe="'+ev.id+'">Edit</button>';
+    return s+'</div>';
+  }
+  function bindPlateEvents(el){
+    var ees=el.querySelectorAll("[data-pe]");
+    for (var x=0;x<ees.length;x++) ees[x].addEventListener("click", function(){
+      openEventModal(eventById(this.getAttribute("data-pe")), null);
+    });
+  }
   function renderPlate(){
     var el=$("plate"); if (!el) return;
     var today=new Date();
@@ -1446,7 +1475,15 @@
         return '<div class="pli">'+(taskOverdue(t)?'<b>&#9888;</b> ':'')+'<b>'+esc(t.title)+'</b> &mdash; '+dueText(t)+(t.subject?' \u00b7 '+esc(t.subject):'')+'</div>';
       }).join("");
     }
+    // Calendar events land on the plate too — school tests, boards, competitive exams.
+    var evs = upcomingEventsByCat(["school","board","exam"]);
+    if (evs.length){
+      html += evs.slice(0,6).map(evPlateRow).join("");
+    } else if (role!=="parent"){
+      html += '<div class="pli" style="opacity:.75">No upcoming tests on the calendar &mdash; add one: School tab &rarr; Calendar &rarr; + Add event (or I add it).</div>';
+    }
     el.innerHTML = html;
+    bindPlateEvents(el);
   }
   function renderSchool(){
     var el=$("schoolList"); if (!el) return;
@@ -1475,6 +1512,14 @@
   $("schoolSubject").addEventListener("change", renderSchool);
   $("addSchool").addEventListener("click", function(){ openTaskModal("school", null); });
 
+  function renderVantalyneEvents(){
+    var wrap=$("vEventsWrap"); if (!wrap) return;
+    var evs=upcomingEventsByCat(["vantalyne"]);
+    wrap.style.display = evs.length ? "block" : "none";
+    if (!evs.length) return;
+    $("vEvents").innerHTML = evs.slice(0,6).map(evPlateRow).join("");
+    bindPlateEvents($("vEvents"));
+  }
   /* ============ VANTALYNE TAB ============ */
   function renderVantalyne(){
     var el=$("vList"); if (!el) return;
@@ -1494,6 +1539,7 @@
     }
     el.innerHTML = arr.map(function(t){ return taskRow(t,"vantalyne"); }).join("");
     bindTaskList(el);
+    renderVantalyneEvents();
   }
   $("vCat").addEventListener("change", renderVantalyne);
   $("vFilter").addEventListener("change", renderVantalyne);
@@ -1777,10 +1823,12 @@
 
   /* ============ EVENT CALENDAR ============ */
   var EV_CATS = {
-    college: { cls:"evcoll",  cat:"coll",  label:"College App",      color:"#e0876b" },
-    exam:    { cls:"evexam",  cat:"exam",  label:"Competitive Exam", color:"#35c48b" },
-    board:   { cls:"evboard", cat:"board", label:"Board",            color:"#b8963e" },
-    other:   { cls:"evother", cat:"oth",   label:"Other",            color:"#5a7085" }
+    college:  { cls:"evcoll",  cat:"coll",  label:"College App",      color:"#e0876b" },
+    exam:     { cls:"evexam",  cat:"exam",  label:"Competitive Exam", color:"#35c48b" },
+    board:    { cls:"evboard", cat:"board", label:"Board",            color:"#b8963e" },
+    school:   { cls:"evscho",  cat:"sch",   label:"School Test",      color:"#7aa6e0" },
+    vantalyne:{ cls:"evvant",  cat:"van",   label:"Vantalyne",        color:"#c98fe0" },
+    other:    { cls:"evother", cat:"oth",   label:"Other",            color:"#5a7085" }
   };
   var calMonth = new Date().getMonth(), calYear = new Date().getFullYear();
 
@@ -1792,6 +1840,28 @@
       return dateStr >= start && dateStr <= end;
     });
   }
+  // Upcoming events (still active today or later) filtered by category — shared by school/vantalyne tabs.
+  function upcomingEventsByCat(cats){
+    var t=todayIso();
+    return state.events.filter(function(ev){
+      if (!ev) return false;
+      if (cats.indexOf(ev.category)<0) return false;
+      var end=ev.end_date || ev.date;
+      return end>=t;
+    }).sort(function(a,b){
+      var ad=a.date||a.start_date, bd=b.date||b.start_date;
+      return ad<bd?-1:(ad>bd?1:0);
+    });
+  }
+  function eventCountdown(ev){
+    var d=parseIso(ev.date||ev.start_date);
+    var now=new Date();
+    if (sameDay(d,now)) return "today";
+    var diff=Math.round((d-now)/86400000);
+    if (diff===1) return "tomorrow";
+    if (diff<0) return Math.abs(diff)+" day(s) ago";
+    return "in "+diff+" day(s)";
+  }
   function evRowHtml(ev, ro){
     var c = EV_CATS[ev.category]||EV_CATS.other;
     var acts = ro ? "" : '<div class="acts">'+
@@ -1800,6 +1870,7 @@
       '<div class="em"><div class="et">'+esc(ev.title)+' <span class="ecat '+c.cat+'">'+c.label+'</span></div>'+
       '<div class="es">'+pretty(ev.date)+(ev.time?' &nbsp;\u00b7&nbsp; '+esc(ev.time):'')+'</div>'+
       (ev.notes?'<div class="en">'+esc(ev.notes)+'</div>':'')+
+      (ev.syllabus?'<div class="en"><b>To cover:</b> '+esc(ev.syllabus)+'</div>':'')+
       '</div>'+acts+'</div>';
   }
   function renderEvList(){
@@ -1809,7 +1880,7 @@
     var arr=state.events.filter(function(ev){ return ev.date>=today; })
       .sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
     if (!arr.length){
-      el.innerHTML = '<div class="empty"><div class="big">&#128197;</div>No upcoming events. Add the SAT, CLAT, boards and every college deadline here &mdash; parents see it too.</div>';
+      el.innerHTML = '<div class="empty"><div class="big">&#128197;</div>No upcoming events. Add school tests, Vantalyne, SAT, CLAT, boards and college deadlines here &mdash; parents see it too.</div>';
       return;
     }
     el.innerHTML = arr.map(function(ev){ return evRowHtml(ev, ro); }).join("");
@@ -1889,6 +1960,7 @@
     $("evEndDate").value = ev ? (ev.end_date || "") : "";
     $("evTime").value = (ev && ev.time) ? ev.time : "";
     $("evNotes").value = (ev && ev.notes) ? ev.notes : "";
+    $("evSyllabus").value = (ev && ev.syllabus) ? ev.syllabus : "";
     $("evDelete").style.display = ev ? "inline-block" : "none";
     $("evModal").classList.add("open");
     $("evTitleI").focus();
@@ -1907,7 +1979,8 @@
       date: date,
       end_date: endDate,
       time: $("evTime").value || null,
-      notes: $("evNotes").value.trim() || null
+      notes: $("evNotes").value.trim() || null,
+      syllabus: $("evSyllabus").value.trim() || null
     };
     if (editingEv) ev.id = editingEv.id;
     apiUpsertEvent(ev).then(function(){
